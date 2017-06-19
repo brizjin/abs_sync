@@ -113,9 +113,10 @@ def git_checkout(repo, branch_name):
         print('Имеются незакомиченные изменения:\n' + "\n".join(s) + "\nОперация прервана.")
         # repo.git.stash('save')
         # repo.git.stash('pop')
-        return
+        return s
     repo.git.checkout(branch_name)
-    print("Текущая ветка:" % repo.active_branch.name)
+    print("Ветка удачно переключеная на :" % repo.active_branch.name)
+    return
 
 
 def git_commit(repo):
@@ -211,7 +212,9 @@ def updater(db, t, p, u, o, b):
     if b:
         repo = Repo(prj_dir)
         prev_branch = repo.active_branch.name
-        git_checkout(repo, db)
+        if git_checkout(repo, db):
+            print("Чтобы использовать флаг -b сначала закомментируйте изменения")
+            return
     if o:
         update_from_list(cnn, o, p)
     if t:
@@ -220,7 +223,7 @@ def updater(db, t, p, u, o, b):
         update_from_dir_list(cnn, p)
     if b:
         git_commit(repo)
-        git_checkout(prev_branch)
+        git_checkout(repo, prev_branch)
 
 
 if __name__ == '__main__':

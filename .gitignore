@@ -1,2 +1,12 @@
-.idea/dbnavigator.xml
 .idea/workspace.xml
+.idea/dbnavigator.xml
+*.~tst
+*.~sql
+*.~pdc
+*.~bdy
+.idea/dictionaries/*
+.idea/inspectionProfiles/Project_Default.xml
+.idea/dbnavigator.xml
+.idea/misc.xml
+*.log
+*.pyc
