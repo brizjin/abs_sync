@@ -9,7 +9,8 @@ from git import Repo
 
 import oracle_connection
 
-prj_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+# prj_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+prj_dir = "C:/Users/BryzzhinIS/Documents/Хранилища/pack_texts"
 
 
 # os.chdir(prj_dir)
@@ -115,21 +116,25 @@ def git_checkout(repo, branch_name):
         # repo.git.stash('pop')
         return s
     repo.git.checkout(branch_name)
-    print("Ветка удачно переключеная на :" % repo.active_branch.name)
+    print("Текущая ветка %s." % repo.active_branch.name)
     return
 
 
 def git_commit(repo):
-    modified_files = [os.path.join(prj_dir, m.a_path) for m in repo.index.diff(None)]
-    staged_files = [os.path.join(prj_dir, s.a_path) for s in repo.index.diff("HEAD")]
-    untrack_files = [os.path.join(prj_dir, u) for u in repo.untracked_files]
-    s = sorted(modified_files + staged_files + untrack_files)
-    print("Current branch: %s" % repo.active_branch.name)
-    print("\n".join(["commit " + f for f in s]))
-    # repo.index.add(s)
     repo.git.add(update=True)
-    repo.index.commit("my commit message")  # .type
-    # print(repo.index.entries.items())
+    #modified_files = [os.path.join(prj_dir, m.a_path) for m in repo.index.diff(None)]
+    staged_files = [os.path.join(prj_dir, s.a_path) for s in repo.index.diff("HEAD")]
+    #untrack_files = [os.path.join(prj_dir, u) for u in repo.untracked_files]
+    #s = sorted(modified_files + staged_files + untrack_files)
+    s = sorted(staged_files)
+    #print("Current branch: %s" % repo.active_branch.name)
+    if len(s) > 0 :
+        print("\n".join(["commit " + f for f in s]))
+        # repo.index.add(s)
+        repo.index.commit("my commit message")  # .type
+        # print(repo.index.entries.items())
+    else:
+        print("Все изменения уже пременены, нечего коммитить")
 
 
 db_obj_sql_text = """
