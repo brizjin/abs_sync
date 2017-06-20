@@ -131,7 +131,7 @@ def git_commit(repo):
     if len(s) > 0 :
         print("\n".join(["commit " + f for f in s]))
         # repo.index.add(s)
-        repo.index.commit("my commit message")  # .type
+        repo.index.commit("commited by autosync script")  # .type
         # print(repo.index.entries.items())
     else:
         print("Все изменения уже пременены, нечего коммитить")
@@ -168,7 +168,7 @@ def update_for_time(cnn, t, p):
 
 def update_from_dir_list(cnn, p):
     folders = [f for f in os.listdir(prj_dir) if not os.path.isfile(os.path.join(prj_dir, f))]
-    folders = [f for f in folders if f not in ['.git', '.idea', 'PLSQL', 'TESTS']]
+    folders = [f for f in folders if f not in ['.git', '.idea', '.sync', 'PLSQL', 'TESTS']]
     files = [(f, set([file.split(".")[0] for file in os.listdir(os.path.join(prj_dir, f))
                       if os.path.isfile(os.path.join(prj_dir, f, file))])) for f in folders]
     files_where = " or ".join(
@@ -214,7 +214,7 @@ def updater(db, t, p, u, o, b):
     cnn = oracle_connection.Db().connect("ibs/HtuRhtl@%s" % db)
     repo = None
     prev_branch = None
-    if b:
+    if b and not p:
         repo = Repo(prj_dir)
         prev_branch = repo.active_branch.name
         if git_checkout(repo, db):
@@ -226,7 +226,7 @@ def updater(db, t, p, u, o, b):
         update_for_time(cnn, t, p)
     if u:
         update_from_dir_list(cnn, p)
-    if b:
+    if b and not p:
         git_commit(repo)
         git_checkout(repo, prev_branch)
 
