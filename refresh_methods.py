@@ -121,14 +121,15 @@ def git_checkout(repo, branch_name):
 
 
 def git_commit(repo):
-    repo.git.add(update=True)
-    #modified_files = [os.path.join(prj_dir, m.a_path) for m in repo.index.diff(None)]
+    # repo.git.add(update=True)
+    repo.git.add(all=True)
+    # modified_files = [os.path.join(prj_dir, m.a_path) for m in repo.index.diff(None)]
     staged_files = [os.path.join(prj_dir, s.a_path) for s in repo.index.diff("HEAD")]
-    #untrack_files = [os.path.join(prj_dir, u) for u in repo.untracked_files]
-    #s = sorted(modified_files + staged_files + untrack_files)
+    # untrack_files = [os.path.join(prj_dir, u) for u in repo.untracked_files]
+    # s = sorted(modified_files + staged_files + untrack_files)
     s = sorted(staged_files)
-    #print("Current branch: %s" % repo.active_branch.name)
-    if len(s) > 0 :
+    # print("Current branch: %s" % repo.active_branch.name)
+    if len(s) > 0:
         print("\n".join(["commit " + f for f in s]))
         # repo.index.add(s)
         repo.index.commit("commited by autosync script")  # .type
