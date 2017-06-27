@@ -20,7 +20,7 @@ class Db:
                                               threaded=True)
             return self
         except Exception as e:
-            print("*** Ошибка выполнения connect:%s,%s" % (traceback.format_exception(), traceback.format_exc()))
+            print("*** Ошибка выполнения connect:%s" % (traceback.format_exc()))
 
     def request(self, xml_in):
         try:
