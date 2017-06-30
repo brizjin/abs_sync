@@ -1,10 +1,10 @@
 import os
 import re
-
-import click
-import cx_Oracle
 # import importlib.util
 #
+import sys
+
+import cx_Oracle
 from git import Repo
 
 import oracle_connection
@@ -91,26 +91,22 @@ def update_trigger(cnn, trigger_name):
     write_part(r["trigger_body"], file_name + ".trg.sql")
 
 
-def update(cnn, object_type, class_id, short_name, p):
-    if object_type == 'M':
-        print("METHOD ::[%s].[%s]" % (class_id, short_name))
-        if not p:
-            update_method(cnn, class_id, short_name)
-    elif object_type == 'V':
-        print("VIEW ::[%s].[%s]" % (class_id, short_name))
-        if not p:
-            update_creteria(cnn, class_id, short_name)
+def update(cnn, object_type, class_id, short_name):
+    if object_type == 'METHOD':
+        update_method(cnn, class_id, short_name)
+    elif object_type == 'VIEW':
+        update_creteria(cnn, class_id, short_name)
     elif object_type == 'TRIGGER':
-        print("TRIGGER ::[%s].[%s]" % (class_id, short_name))
-        if not p:
-            update_trigger(cnn, short_name)
+        update_trigger(cnn, short_name)
 
-
-def git_checkout(repo, branch_name):
+def git_staged_files(repo):
     modified_files = ["m " + m.a_path for m in repo.index.diff(None)]
     staged_files = ["s " + s.a_path for s in repo.index.diff("HEAD")]
     untrack_files = ["u " + u for u in repo.untracked_files]
-    s = sorted(modified_files + staged_files + untrack_files)
+    return sorted(modified_files + staged_files + untrack_files)
+
+def git_checkout(repo, branch_name):
+    s=git_staged_files(repo)
     if len(s) > 0:
         print('Имеются незакомиченные изменения:\n' + "\n".join(s) + "\nОперация прервана.")
         # repo.git.stash('save')
@@ -140,18 +136,14 @@ def git_commit(repo):
 
 
 db_obj_sql_text = """
-              select CLASS_ID, SHORT_NAME, MODIFIED, 'M' TYPE from methods 
-    union all select CLASS_ID, SHORT_NAME, MODIFIED, 'V' from criteria
+              select CLASS_ID, SHORT_NAME, MODIFIED, 'METHOD' TYPE from methods 
+    union all select CLASS_ID, SHORT_NAME, MODIFIED, 'VIEW' from criteria
     union all select substr(t.TABLE_NAME,3), object_name, to_date(timestamp,'yyyy-mm-dd hh24:mi:ss'),object_type
     from user_objects u left join all_triggers t on u.OBJECT_NAME = t.TRIGGER_NAME where object_type = 'TRIGGER'
     """
 
 
-def update_for_time(cnn, t, p):
-    rematch = re.match(r"(?P<num>\d+)(?P<interval_name>\w+)", t)
-    num = rematch.group('num')
-    interval_name = rematch.group('interval_name')
-
+def update_for_time(cnn, num, interval_name):
     if interval_name == 'd':
         interval_name = 'day'
     elif interval_name == 'h':
@@ -160,15 +152,15 @@ def update_for_time(cnn, t, p):
         interval_name = 'minute'
     # print(num, interval_name)
 
-    s = cnn.select("""
+    return cnn.select("""
             select * from (%s)
             where modified > sysdate - interval '%s' %s
             order by modified desc nulls last""" % (db_obj_sql_text, num, interval_name))
-    for row in s:
-        update(cnn, row["type"], row["class_id"], row["short_name"], p)
+    # for row in s:
+    #     update(cnn, row["type"], row["class_id"], row["short_name"], p)
 
 
-def update_from_dir_list(cnn, p):
+def update_from_dir_list(cnn):
     folders = [f for f in os.listdir(prj_dir) if not os.path.isfile(os.path.join(prj_dir, f))]
     folders = [f for f in folders if f not in ['.git', '.idea', '.sync', 'PLSQL', 'TESTS']]
     files = [(f, set([file.split(".")[0] for file in os.listdir(os.path.join(prj_dir, f))
@@ -177,39 +169,39 @@ def update_from_dir_list(cnn, p):
         ["CLASS_ID = '%s' and SHORT_NAME in (%s)" % (folder[0], ','.join(["'%s'" % f for f in folder[1]])) for
          folder in files])
 
-    s = cnn.select("""select CLASS_ID, SHORT_NAME, TYPE from (%s) where %s""" % (db_obj_sql_text, files_where))
+    return cnn.select("""select CLASS_ID, SHORT_NAME, TYPE from (%s) where %s""" % (db_obj_sql_text, files_where))
 
-    for row in s:
-        update(cnn, row["type"], row["class_id"], row["short_name"], p)
+    # for row in s:
+    #     update(cnn, row["type"], row["class_id"], row["short_name"], p)
 
 
-def update_from_list(cnn, o, p):
+def update_from_list(cnn, o):
     objs = [[part for part in obj.split('.')] for obj in o.split(',')]
     files_where = " or ".join("CLASS_ID = '%s' and SHORT_NAME = '%s'" % (obj[0], obj[1]) for obj in objs)
     print(files_where)
-    s = cnn.select("""select CLASS_ID, SHORT_NAME, TYPE from (%s) where %s""" % (db_obj_sql_text, files_where))
+    return cnn.select("""select CLASS_ID, SHORT_NAME, TYPE from (%s) where %s""" % (db_obj_sql_text, files_where))
 
     # for class_name, method_or_view in [obj.split('.') for obj in o.split(',')]:
-    for row in s:
-        print('::[%s].[%s]' % (row["class_id"], row["short_name"]))
-        update(cnn, row["type"], row["class_id"], row["short_name"], p)
-        # update_method(cnn, class_name, method_or_view)
-        # print(objs_list)
+    # for row in s:
+    #     print('::[%s].[%s]' % (row["class_id"], row["short_name"]))
+    #     update(cnn, row["type"], row["class_id"], row["short_name"], p)
+    # update_method(cnn, class_name, method_or_view)
+    # print(objs_list)
 
 
-@click.command()
-@click.argument('db')
-@click.option('-o', help='Список объектов, например так: BRK_MSG.L,BRK_MSG.EVENTS2')
-@click.option('-t', help="""Время за которое сохраняем, цифра и вид интервала.
-    d-день
-    h-час
-    m-минута
-Например
-    за 36 часов: -t 36h
-    за последние 3 дня: -t 3d""")
-@click.option('-p/-no-p', help='Только вывод на экран. Не сохранять методы', default=False)
-@click.option('-b/-no-b', help='Переключить ветку', default=False)
-@click.option('-u/-no-u', help='Обновить все что уже скаченно', default=False)
+# @click.command()
+# @click.argument('db')
+# @click.option('-o', help='Список объектов, например так: BRK_MSG.L,BRK_MSG.EVENTS2')
+# @click.option('-t', help="""Время за которое сохраняем, цифра и вид интервала.
+#     d-день
+#     h-час
+#     m-минута
+# Например
+#     за 36 часов: -t 36h
+#     за последние 3 дня: -t 3d""")
+# @click.option('-p/-no-p', help='Только вывод на экран. Не сохранять методы', default=False)
+# @click.option('-b/-no-b', help='Переключить ветку', default=False)
+# @click.option('-u/-no-u', help='Обновить все что уже скаченно', default=False)
 # @click.option('--name', prompt='Your name', help='The person to greet.')
 def updater(db, t, p, u, o, b):
     # db = 'day'
@@ -234,7 +226,55 @@ def updater(db, t, p, u, o, b):
 
 
 if __name__ == '__main__':
-    updater()
+    def updater_argv():
+        print("sys=%s" % sys.argv)
+        params = [p for p in sys.argv[1:] if not re.match("-", p)]
+        flags = [p for p in sys.argv[1:] if re.match("-", p)]
+
+        if len(params) == 0:
+            raise Exception("Необходимо указать имя базы данных")
+        db_name = params[0]
+        cnn = oracle_connection.Db().connect("ibs/HtuRhtl@%s" % db_name)
+        c = "-c" in flags  # коммитить
+        p = "-p" in flags  # только вывод на экран
+        objs = None
+        if len(params) == 1:
+            print("Обновим все файлы.")
+            objs = update_from_dir_list(cnn)
+        elif len(params) == 2:
+            s = params[1]
+            time_match = re.match(r"(?P<num>\d+)(?P<interval_name>\w+)", s)
+            list_match = re.match(r"\w+.\w+(,\w+.\w+)*", s)
+            if time_match:
+                print("Сохраним все изменения за %s." % s)
+                objs = update_for_time(cnn, time_match.group('num'), time_match.group('interval_name'))
+            elif list_match:
+                print("Сохраним по списку операций %s" % s)
+                objs = update_from_list(cnn, s)
+
+        prev_branch = None
+        repo = None
+        if not p:
+            repo = Repo(prj_dir)
+            if git_staged_files(repo):
+                print("В рабочем каталоге имеются не зафиксированные изменения")
+                return
+            prev_branch = repo.active_branch.name
+            if c:
+                git_checkout(repo, db_name)
+        for row in objs:
+            print("%s ::[%s].[%s]" % (row["type"], row["class_id"], row["short_name"]))
+            if not p:
+                update(cnn, row["type"], row["class_id"], row["short_name"])
+        if c:
+            git_commit(repo)
+            git_checkout(repo, prev_branch)
+
+
+    updater_argv()
+    # db_name = sys.argv[1]
+    # updater()
+
     # update_class("BRK_BP")
     # update_creteria('BRK_MSG', 'VW_RPT_BRK_MSG_GET_RECORDS')
     # update_method("BRK_MSG", "L")
