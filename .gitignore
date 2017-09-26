@@ -1,5 +1,7 @@
 .idea/workspace.xml
 .idea/dbnavigator.xml
+dbs/
+venv/
 *.~tst
 *.~sql
 *.~pdc
@@ -10,3 +12,5 @@
 .idea/misc.xml
 *.log
 *.pyc
+.idea/misc.xml
+.idea/other.xml

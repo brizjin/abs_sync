@@ -1,0 +1,4 @@
+pandas
+cx_Oracle
+gitpython
+schedule

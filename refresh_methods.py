@@ -9,6 +9,9 @@ from git import Repo
 
 import oracle_connection
 
+os.environ["ORACLE_HOME"] = "C:/app/BryzzhinIS/product/11.2.0/client_1/"
+os.environ['NLS_LANG'] = '.AL32UTF8'
+
 # prj_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 sync_script_dir = os.path.dirname(os.path.realpath(__file__))
 prj_dir = "C:/Users/BryzzhinIS/Documents/Хранилища/pack_texts"
