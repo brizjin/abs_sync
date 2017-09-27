@@ -32,25 +32,7 @@ logger.addHandler(fh)
 logger.addHandler(ch)
 
 
-# def init_pool(conn_str):
-#     global cnn
-#
-#     # instant_client_path = r'C:\Users\BryzzhinIS\Downloads\instantclient_12_2'
-#     # if instant_client_path not in sys.path:
-#     #     sys.path.insert(0,instant_client_path)
-#
-#     m = re.match(r"(?P<user>.+)/(?P<pass>.+)@(?P<dbname>.+)", conn_str)
-#     os.environ["ORACLE_HOME"] = "C:/app/BryzzhinIS/product/11.2.0/client_1/"
-#     os.environ['NLS_LANG'] = '.AL32UTF8'
-#     # pool = cx_Oracle.SessionPool(user=m.group('user'), password=m.group('pass'), dsn=m.group('dbname'), min=1, max=2,
-#     #                              increment=1, threaded=True)
-#     cnn = cx_Oracle.connect(conn_str)
-
-
-# init_pool(connection_string)
-
-
-def select(sql_text):
+def select(cnn, sql_text):
     # conn = pool.acquire()
 
     def read_value(v):
@@ -72,7 +54,7 @@ def select(sql_text):
     return df
 
 
-def execute_plsql(pl_sql_text):
+def execute_plsql(cnn, pl_sql_text):
     # conn = pool.acquire()
     cursor = cnn.cursor()
     cursor.execute(pl_sql_text)
@@ -80,15 +62,15 @@ def execute_plsql(pl_sql_text):
     # pool.release(conn)
 
 
-def select_tune_date_update():
+def select_tune_date_update(cnn):
     sql = """select to_date(Z$FP_TUNE_LIB.get_str_value('BRK_DB_UPDATE_DATE',throw_error=>'0'),'dd/mm/yyyy hh24:mi:ss') date_update
              from dual"""
-    tune = select(sql)["DATE_UPDATE"][0]
+    tune = select(cnn, sql)["DATE_UPDATE"][0]
     logger.info("Tune selected: %s" % tune)
     return tune
 
 
-def create_tune_date_update():
+def create_tune_date_update(cnn):
     logger.info("Create tune")
     sql = """
         declare
@@ -124,7 +106,7 @@ def create_tune_date_update():
             commit;
             rtl.close(i);
         end;"""
-    execute_plsql(sql)
+    execute_plsql(cnn, sql)
     logger.info("Tune created")
 
 
@@ -137,15 +119,48 @@ def create_jobs():
     os.environ["ORACLE_HOME"] = "C:/app/BryzzhinIS/product/11.2.0/client_1/"
     os.environ['NLS_LANG'] = '.AL32UTF8'
     dbs = ["ibs/HtuRhtl@day"]
-    for db_cnn in dbs:
-        db_name = re.match(r"(?P<user>.+)/(?P<pass>.+)@(?P<dbname>.+)", db_cnn).group('dbname')
-        #os.makedirs(os.path.join('dbs', m.group('dbname')))
+    for db_cnn_str in dbs:
+        db_name = re.match(r"(?P<user>.+)/(?P<pass>.+)@(?P<dbname>.+)", db_cnn_str).group('dbname')
+        # os.makedirs(os.path.join('dbs', db_name))
         git_url = "http://git.brc.local:3000/ivan.bryzzhin/abs.git"
         repo_dir = os.path.join('dbs', db_name)
-        Repo.clone_from(git_url, repo_dir)
 
-        # cnn = cx_Oracle.connect(conn_str)
-create_jobs()
+        if not os.path.isdir(os.path.join(repo_dir, '.git')):
+            logger.info("clone repo for %s" % db_name)
+            Repo.clone_from(git_url, repo_dir)
+        repo = Repo(repo_dir)
+        logger.info("open repo %s is_dirty: %s" % (db_name, repo.is_dirty()))
+
+        cnn = cx_Oracle.connect(db_cnn_str)
+        if not select_tune_date_update(cnn):
+            logger.info("База была обновлена. Запишим новую настройку об обновлении")
+            create_tune_date_update(cnn)
+            date_updated = select_tune_date_update(cnn)
+            branch_name = '%s_%s' % (db_name, date_updated.strftime('%Y%m%d_%H%M'))  # %Y%m%d_%H%M%S
+            logger.info("checkout new branch %s" % branch_name)
+            past_branch = repo.create_head(branch_name, 'master')
+            repo.head.reference = past_branch
+            repo.head.reset(index=True, working_tree=True)
+            # repo.head.reference = past_branch
+            # assert not repo.head.is_detached
+            # reset the index and working tree to match the pointed-to commit
+            # repo.head.reset(index=True, working_tree=True)
+
+
+# create_jobs()
+def job():
+    os.environ["ORACLE_HOME"] = "C:/app/BryzzhinIS/product/11.2.0/client_1/"
+    os.environ['NLS_LANG'] = '.AL32UTF8'
+    cnn = cx_Oracle.connect("ibs/HtuRhtl@day")
+    print(select(cnn, """select m.class_id, m.short_name, m.package_name, m.modified, m.user_modified, s.type, s.line, s.text a--, m.user_driven, m.*
+from sources s
+inner join METHODS m on m.id = s.name
+where m.class_id = 'BRK_MSG' and m.short_name = 'L'
+order by m.class_id, m.short_name, s.type, s.line""").groupby(
+        ['CLASS_ID', 'SHORT_NAME', 'PACKAGE_NAME', 'MODIFIED', 'USER_MODIFIED', 'TYPE']))
+
+
+job()
 # schedule.every(2).seconds.do(job)
 #
 # while True:

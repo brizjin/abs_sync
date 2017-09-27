@@ -102,14 +102,16 @@ def update(cnn, object_type, class_id, short_name):
     elif object_type == 'TRIGGER':
         update_trigger(cnn, short_name)
 
+
 def git_staged_files(repo):
     modified_files = ["m " + m.a_path for m in repo.index.diff(None)]
     staged_files = ["s " + s.a_path for s in repo.index.diff("HEAD")]
     untrack_files = ["u " + u for u in repo.untracked_files]
     return sorted(modified_files + staged_files + untrack_files)
 
+
 def git_checkout(repo, branch_name):
-    s=git_staged_files(repo)
+    s = git_staged_files(repo)
     if len(s) > 0:
         print('Имеются незакомиченные изменения:\n' + "\n".join(s) + "\nОперация прервана.")
         # repo.git.stash('save')
@@ -163,11 +165,11 @@ def update_for_time(cnn, num, interval_name):
     #     update(cnn, row["type"], row["class_id"], row["short_name"], p)
 
 
-def update_from_dir_list(cnn):
-    folders = [f for f in os.listdir(prj_dir) if not os.path.isfile(os.path.join(prj_dir, f))]
+def update_from_dir_list(cnn, dir_path=prj_dir):
+    folders = [f for f in os.listdir(dir_path) if not os.path.isfile(os.path.join(dir_path, f))]
     folders = [f for f in folders if f not in ['.git', '.idea', '.sync', 'PLSQL', 'TESTS']]
-    files = [(f, set([file.split(".")[0] for file in os.listdir(os.path.join(prj_dir, f))
-                      if os.path.isfile(os.path.join(prj_dir, f, file))])) for f in folders]
+    files = [(f, set([file.split(".")[0] for file in os.listdir(os.path.join(dir_path, f))
+                      if os.path.isfile(os.path.join(dir_path, f, file))])) for f in folders]
     files_where = " or ".join(
         ["CLASS_ID = '%s' and SHORT_NAME in (%s)" % (folder[0], ','.join(["'%s'" % f for f in folder[1]])) for
          folder in files])
@@ -218,11 +220,11 @@ def updater(db, t, p, u, o, b):
             print("Чтобы использовать флаг -b сначала закомментируйте изменения")
             return
     if o:
-        update_from_list(cnn, o, p)
+        update_from_list(cnn, o)
     if t:
         update_for_time(cnn, t, p)
     if u:
-        update_from_dir_list(cnn, p)
+        update_from_dir_list(cnn)
     if b and not p:
         git_commit(repo)
         git_checkout(repo, prev_branch)
@@ -284,10 +286,6 @@ if __name__ == '__main__':
     # update_method("BRK_MSG", "EVENTS2")
     # update_class("BRK_MSG")
     # update_method("BRK_MSG", "NEW_AUTO")
-
-
-
-
 
 # r = cnn.execute_plsql(sql_text, **dict(class_name="BRK_MSG", method_name="NEW_AUTO", e=cx_Oracle.CLOB,
 #                                        v=cx_Oracle.CLOB, g=cx_Oracle.CLOB,

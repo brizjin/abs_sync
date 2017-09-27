@@ -14,3 +14,5 @@ venv/
 *.pyc
 .idea/misc.xml
 .idea/other.xml
+.idea/dataSources.local.xml
+.idea/dataSources/
