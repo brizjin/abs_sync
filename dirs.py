@@ -1,9 +1,10 @@
 import os
+import re
 
 import pandas as pd
 
 
-def get_project_objects(dir_path):
+def objects_in_folder(dir_path):
     folders = [f for f in os.listdir(dir_path) if not os.path.isfile(os.path.join(dir_path, f))]
     folders = [f for f in folders if f not in ['.git', '.idea', '.sync', 'PLSQL', 'TESTS']]
     files = [(f, file) for f in folders for file in os.listdir(os.path.join(dir_path, f))]
@@ -22,3 +23,17 @@ def get_project_objects(dir_path):
     df = pd.DataFrame([(file[0], file[1].split('.')[0], f(file[1])) for file in files],
                       columns=['CLASS_ID', 'SHORT_NAME', 'TYPE']).drop_duplicates()
     return df  # [df["TYPE"] == 'METHOD']
+
+def write_object(project_folder, class_id, short_name, extention, text):
+    if text:
+        dirname = os.path.join(project_folder, class_id)
+        extention = ('.' + (extention or '')).rstrip('.')
+        filename = os.path.join(dirname, short_name + extention + '.sql')
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+        with open(filename, "wb+") as f:
+            part = re.sub(r'[ \t\r\f\v]*\n', '\n', text, flags=re.M)
+            # part = part.replace('\n', '\r\n').encode()
+            part = part.encode()
+            f.write(part)
+

@@ -14,7 +14,13 @@ def read_value_cursor(v):
     if v and type(v) in (cx_Oracle.CLOB, cx_Oracle.BLOB, cx_Oracle.LOB):
         return v.read()
     elif v and type(v) == cx_Oracle.Cursor:
-        return "\n".join(filter(None, [a[0] for a in v]))
+        # return "\n".join(filter(None, [a[0] for a in v]))
+        # return "\n".join([a[0] or '' for a in v])
+        s = ""
+        for a in v:
+            s += (a[0] or '') + "\n"
+        return s
+        #return "\n".join([a[0] or '' for a in v])
     return v
 
 
@@ -86,6 +92,7 @@ def select_methods_by_name(cnn, class_id, short_name):
 
 
 def where_clause_by_name(objs):
+    objs = objs.copy()
     objs.SHORT_NAME = objs.SHORT_NAME.apply(lambda a: "'%s'" % a.upper())
     group = objs.groupby(["CLASS_ID"])
     condition = "CLASS_ID = '%s' and SHORT_NAME in (%s)"
@@ -95,7 +102,7 @@ def where_clause_by_name(objs):
 
 
 def select_all_methods_in_folder(cnn, folder_name):
-    df = dirs.get_project_objects(folder_name)
+    df = dirs.objects_in_folder(folder_name)
     where_clause = where_clause_by_name(df[df["TYPE"] == 'METHOD'])
     sql = methods_sql + "\nwhere " + where_clause
     return select(cnn, sql, read_value_cursor)
@@ -104,16 +111,26 @@ def select_all_methods_in_folder(cnn, folder_name):
 interval = {'d': 'day', 'h': 'hour', 'm': 'minute', 's': 'second'}
 
 
-def select_types_in_folder_or_date_modified(cnn, type, folder_path, num, interval_name):
-    df = dirs.get_project_objects(folder_path)
-    where_by_name = where_clause_by_name(df[df["TYPE"] == type])
-    sql = texts_sql[type] + """\n where (%s) or
+def select_types_in_folder_or_date_modified(cnn, object_type, folder_objects, num, interval_name):
+    where_by_name = where_clause_by_name(folder_objects[folder_objects["TYPE"] == object_type])
+    sql = texts_sql[object_type] + """\n where (%s) or
                     modified > sysdate - interval '%s' %s
                     order by modified nulls last""" % (where_by_name, num, interval[interval_name])
-    #print(sql)
     df = select(cnn, sql, read_value_cursor)
     return df
 
 
-def select_methods_by_names_list(cnn, names):
-    pass
+def select_objects_in_folder_or_date_modified(cnn, folder_path, num, date_modified_interval):
+    # folder_path = r"C:\Users\BryzzhinIS\Documents\Хранилища\sync_script\dbs\day"
+    nstr = lambda a: a or ''
+    folder_objects_df = dirs.objects_in_folder(folder_path)
+    method_df = select_types_in_folder_or_date_modified(cnn, 'METHOD', folder_objects_df, num, date_modified_interval)
+    view_df = select_types_in_folder_or_date_modified(cnn, 'VIEW', folder_objects_df, num, date_modified_interval)
+    view_df["TEXT"] = view_df["CONDITION"].map(nstr) + view_df["ORDER_BY"].map(nstr) + view_df["GROUP_BY"].map(nstr)
+    view_df = view_df.drop(["CONDITION", "ORDER_BY", "GROUP_BY"], axis=1)
+    trigger_df = select_types_in_folder_or_date_modified(cnn, 'TRIGGER', folder_objects_df, num, date_modified_interval)
+    trigger_df["TEXT"] = trigger_df["HEADER"].map(nstr) + trigger_df["TEXT"]
+    del trigger_df["HEADER"]
+    df = pd.concat([method_df, view_df, trigger_df])
+    df = df[df["TEXT"].map(lambda a: a.strip() != '')]  # Удалим строки с пустыми TEXT
+    return df
