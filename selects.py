@@ -1,7 +1,11 @@
+import logging
+
 import cx_Oracle
 import pandas as pd
 
 import dirs
+
+logger = logging.getLogger('root')
 
 
 def read_value_default(v):
@@ -20,7 +24,7 @@ def read_value_cursor(v):
         for a in v:
             s += (a[0] or '') + "\n"
         return s
-        #return "\n".join([a[0] or '' for a in v])
+        # return "\n".join([a[0] or '' for a in v])
     return v
 
 
@@ -28,10 +32,13 @@ def select(cnn, sql_text, read_value=read_value_default):
     def read():
         cursor = cnn.cursor()
         cursor.execute(sql_text)
-        rows = [[read_value(v) for v in row] for row in cursor]
-        names = [x[0] for x in cursor.description]
+        select_result_df = None
+        if cursor.description:
+            rows = [[read_value(v) for v in row] for row in cursor]
+            names = [x[0] for x in cursor.description]
+            select_result_df = pd.DataFrame(rows, columns=names)
         cursor.close()
-        return pd.DataFrame(rows, columns=names)
+        return select_result_df
 
     df = read()
     return df
@@ -116,6 +123,7 @@ def select_types_in_folder_or_date_modified(cnn, object_type, folder_objects, nu
     sql = texts_sql[object_type] + """\n where (%s) or
                     modified > sysdate - interval '%s' %s
                     order by modified nulls last""" % (where_by_name, num, interval[interval_name])
+    # logger.info(sql)
     df = select(cnn, sql, read_value_cursor)
     return df
 
@@ -134,3 +142,69 @@ def select_objects_in_folder_or_date_modified(cnn, folder_path, num, date_modifi
     df = pd.concat([method_df, view_df, trigger_df])
     df = df[df["TEXT"].map(lambda a: a.strip() != '')]  # Удалим строки с пустыми TEXT
     return df
+
+
+def select_tune_date_update(cnn):
+    sql = """select to_date(Z$FP_TUNE_LIB.get_str_value('BRK_DB_UPDATE_DATE',throw_error=>'0'),'dd/mm/yyyy hh24:mi:ss') date_update
+             from dual"""
+    tune = select(cnn, sql)["DATE_UPDATE"][0]
+    logger.info("Tune selected: %s" % tune)
+    return tune
+
+
+def create_tune_date_update(cnn):
+    logger.info("Create tune")
+    sql = u"""
+        declare
+          i integer := rtl.open;
+        begin
+        
+            declare
+                plp$ID_1  number;
+              V_CODE  varchar2(200) := 'BRK_DB_UPDATE_DATE';
+              V_TUNE  number;
+              V_VALUE varchar2(200) := TO_CHAR(SYSDATE,'dd/mm/yyyy hh24:mi:ss');
+            begin
+              begin
+                declare
+                  cursor c_obj is
+                    select  a1.id
+                    from Z#FP_TUNE a1
+                    where a1.C_CODE = V_CODE;
+                begin
+                  plp$ID_1 := NULL;
+                  for plp$c_obj in c_obj loop
+                    plp$ID_1 := plp$c_obj.id; exit;
+                  end loop;
+                  if plp$ID_1 is NULL then raise rtl.NO_DATA_FOUND; end if;
+                end;
+                V_TUNE := plp$ID_1;
+              exception
+              when RTL.NO_DATA_FOUND then
+                V_TUNE := Z$FP_TUNE_NEW#AUTO.NEW#AUTO_EXECUTE(NULL,'FP_TUNE',V_CODE,'БРК. Дата обновления тестовой базы с боевой','BRK','STRING',null,'True - обрабочкики включены',false,null,false);
+                plp$ID_1 := Z$FP_TUNE_LIB.SET_VALUE(V_CODE,V_VALUE);
+                :date_value := to_date(V_VALUE,'dd/mm/yyyy hh24:mi:ss');
+              end;
+              
+            end;
+            commit;
+            rtl.close(i);
+        end;"""
+    cursor = cnn.cursor()
+    date_value = cursor.var(cx_Oracle.DATETIME)  # http://cx-oracle.readthedocs.io/en/latest/module.html
+    cursor.execute(sql, date_value=date_value)
+    date_value = date_value.getvalue()
+    cursor.close()
+    logger.info("Tune created with value=%s" % date_value)
+    return date_value
+
+
+def delete_tune_date_update(cnn):
+    sql = """declare
+         i integer := rtl.open;
+        begin
+         delete from Z#FP_TUNE where C_CODE = 'BRK_DB_UPDATE_DATE';
+         commit;
+         rtl.close(i);
+        end;"""
+    select(cnn, sql)

@@ -8,28 +8,7 @@ from git import Repo
 
 connection_string = "ibs/HtuRhtl@day"
 
-# logging.basicConfig(level=logging.INFO,
-#                     format='%(asctime)-15s PID %(process)5s %(threadName)10s %(name)18s: %(message)s')
-# log_parse_html = logging.getLogger('logger')
-# log_parse_html.info("beg")
-
-# create logger with 'spam_application'
-logger = logging.getLogger('update_service')
-logger.setLevel(logging.DEBUG)
-# create file handler which logs even debug messages
-fh = logging.FileHandler('update_service.log')
-fh.setLevel(logging.DEBUG)
-# create console handler with a higher log level
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
-# create formatter and add it to the handlers
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-formatter = logging.Formatter('%(asctime)-15s %(levelname)s PID %(process)5s %(threadName)10s %(name)18s: %(message)s')
-fh.setFormatter(formatter)
-ch.setFormatter(formatter)
-# add the handlers to the logger
-logger.addHandler(fh)
-logger.addHandler(ch)
+logger = logging.getLogger('root')
 
 
 def select(cnn, sql_text):
@@ -54,65 +33,65 @@ def select(cnn, sql_text):
     return df
 
 
-def execute_plsql(cnn, pl_sql_text):
-    # conn = pool.acquire()
-    cursor = cnn.cursor()
-    cursor.execute(pl_sql_text)
-    cursor.close()
-    # pool.release(conn)
+# def execute_plsql(cnn, pl_sql_text):
+#     # conn = pool.acquire()
+#     cursor = cnn.cursor()
+#     cursor.execute(pl_sql_text)
+#     cursor.close()
+#     # pool.release(conn)
+#
+#
+# def select_tune_date_update(cnn):
+#     sql = """select to_date(Z$FP_TUNE_LIB.get_str_value('BRK_DB_UPDATE_DATE',throw_error=>'0'),'dd/mm/yyyy hh24:mi:ss') date_update
+#              from dual"""
+#     tune = select(cnn, sql)["DATE_UPDATE"][0]
+#     logger.info("Tune selected: %s" % tune)
+#     return tune
+#
+#
+# def create_tune_date_update(cnn):
+#     logger.info("Create tune")
+#     sql = """
+#         declare
+#           i integer := rtl.open;
+#         begin
+#
+#             declare
+#                 plp$ID_1  number;
+#               V_CODE  varchar2(200) := 'BRK_DB_UPDATE_DATE';
+#               V_TUNE  number;
+#               V_VALUE varchar2(200) := TO_CHAR(SYSDATE,'dd/mm/yyyy hh24:mi:ss');
+#             begin
+#               begin
+#                 declare
+#                   cursor c_obj is
+#                     select  a1.id
+#                     from Z#FP_TUNE a1
+#                     where a1.C_CODE = V_CODE;
+#                 begin
+#                   plp$ID_1 := NULL;
+#                   for plp$c_obj in c_obj loop
+#                     plp$ID_1 := plp$c_obj.id; exit;
+#                   end loop;
+#                   if plp$ID_1 is NULL then raise rtl.NO_DATA_FOUND; end if;
+#                 end;
+#                 V_TUNE := plp$ID_1;
+#               exception
+#               when RTL.NO_DATA_FOUND then
+#                 V_TUNE := Z$FP_TUNE_NEW#AUTO.NEW#AUTO_EXECUTE(NULL,'FP_TUNE',V_CODE,'БРК. Дата обновления тестовой базы с боевой','BRK','STRING',null,'True - обрабочкики включены',false,null,false);
+#               end;
+#               plp$ID_1 := Z$FP_TUNE_LIB.SET_VALUE(V_CODE,V_VALUE);
+#             end;
+#             commit;
+#             rtl.close(i);
+#         end;"""
+#     execute_plsql(cnn, sql)
+#     logger.info("Tune created")
 
 
-def select_tune_date_update(cnn):
-    sql = """select to_date(Z$FP_TUNE_LIB.get_str_value('BRK_DB_UPDATE_DATE',throw_error=>'0'),'dd/mm/yyyy hh24:mi:ss') date_update
-             from dual"""
-    tune = select(cnn, sql)["DATE_UPDATE"][0]
-    logger.info("Tune selected: %s" % tune)
-    return tune
-
-
-def create_tune_date_update(cnn):
-    logger.info("Create tune")
-    sql = """
-        declare
-          i integer := rtl.open;
-        begin
-        
-            declare
-                plp$ID_1  number;
-              V_CODE  varchar2(200) := 'BRK_DB_UPDATE_DATE';
-              V_TUNE  number;
-              V_VALUE varchar2(200) := TO_CHAR(SYSDATE,'dd/mm/yyyy hh24:mi:ss');
-            begin
-              begin
-                declare
-                  cursor c_obj is
-                    select  a1.id
-                    from Z#FP_TUNE a1
-                    where a1.C_CODE = V_CODE;
-                begin
-                  plp$ID_1 := NULL;
-                  for plp$c_obj in c_obj loop
-                    plp$ID_1 := plp$c_obj.id; exit;
-                  end loop;
-                  if plp$ID_1 is NULL then raise rtl.NO_DATA_FOUND; end if;
-                end;
-                V_TUNE := plp$ID_1;
-              exception
-              when RTL.NO_DATA_FOUND then
-                V_TUNE := Z$FP_TUNE_NEW#AUTO.NEW#AUTO_EXECUTE(NULL,'FP_TUNE',V_CODE,'БРК. Дата обновления тестовой базы с боевой','BRK','STRING',null,'True - обрабочкики включены',false,null,false);
-              end;
-              plp$ID_1 := Z$FP_TUNE_LIB.SET_VALUE(V_CODE,V_VALUE);
-            end;
-            commit;
-            rtl.close(i);
-        end;"""
-    execute_plsql(cnn, sql)
-    logger.info("Tune created")
-
-
-def job():
-    if not select_tune_date_update():
-        create_tune_date_update()
+# def job():
+#     if not select_tune_date_update():
+#         create_tune_date_update()
 
 
 def create_jobs():

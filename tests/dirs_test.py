@@ -5,6 +5,7 @@ import unittest
 import cx_Oracle as cx_Oracle
 import pandas as pd
 
+import config
 import dirs
 from selects import select_types_in_folder_or_date_modified, select_objects_in_folder_or_date_modified
 
@@ -138,3 +139,14 @@ class DirsTest(unittest.TestCase):
             # with open(name, "wb+") as f:
             #     part = re.sub(r'[ \t\r\f\v]*\n', '\n', part, flags=re.M)
             #     f.write(part.replace('\n', '\r\n').encode())
+
+    def test_writing_objects_by_df(self):
+        os.environ["ORACLE_HOME"] = "C:/app/BryzzhinIS/product/11.2.0/client_1/"
+        os.environ['NLS_LANG'] = '.AL32UTF8'
+        db_cnn_str = "ibs/HtuRhtl@midabs"
+        cnn = cx_Oracle.connect(db_cnn_str)
+
+        # project_folder_path = r"C:\Users\BryzzhinIS\Documents\Хранилища\sync_script\dbs\day"
+        project_folder_path = os.path.join(config.git_folder, cnn.dsn)
+        df = select_objects_in_folder_or_date_modified(cnn, project_folder_path, 1, 'd')
+        dirs.write_object_from_df(df, project_folder_path)

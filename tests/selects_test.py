@@ -3,12 +3,15 @@ import unittest
 
 import cx_Oracle
 
+import log
 from selects import *
 
 os.environ["ORACLE_HOME"] = "C:/app/BryzzhinIS/product/11.2.0/client_1/"
 os.environ['NLS_LANG'] = '.AL32UTF8'
 db_cnn_str = "ibs/HtuRhtl@midabs"
 cnn = cx_Oracle.connect(db_cnn_str)
+
+logger = log.log_init("root")
 
 
 class SelectTest(unittest.TestCase):
@@ -87,3 +90,15 @@ class SelectTest(unittest.TestCase):
         df = select_objects_in_folder_or_date_modified(cnn, folder_path, 1, 'd')
         self.assertGreater(len(df), 0)
         print(df)
+
+    def test_tune_date_updated(self):
+        print(select_tune_date_update(cnn))
+
+    def test_create_tune(self):
+        print(create_tune_date_update(cnn))
+
+    def test_delete_tune(self):
+        print(delete_tune_date_update(cnn))
+
+
+

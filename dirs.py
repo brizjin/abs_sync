@@ -24,6 +24,7 @@ def objects_in_folder(dir_path):
                       columns=['CLASS_ID', 'SHORT_NAME', 'TYPE']).drop_duplicates()
     return df  # [df["TYPE"] == 'METHOD']
 
+
 def write_object(project_folder, class_id, short_name, extention, text):
     if text:
         dirname = os.path.join(project_folder, class_id)
@@ -37,3 +38,7 @@ def write_object(project_folder, class_id, short_name, extention, text):
             part = part.encode()
             f.write(part)
 
+
+def write_object_from_df(df, project_folder_path):
+    for idx, row in df.iterrows():
+        write_object(project_folder_path, row["CLASS_ID"], row["SHORT_NAME"], row["EXTENTION"], row["TEXT"])

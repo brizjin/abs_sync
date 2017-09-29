@@ -16,3 +16,4 @@ venv/
 .idea/other.xml
 .idea/dataSources.local.xml
 .idea/dataSources/
+logs/
