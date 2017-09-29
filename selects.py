@@ -104,6 +104,8 @@ def norm_object(df, type):
     elif type == 'TRIGGER':
         df["TEXT"] = df["HEADER"].map(nstr) + df["TEXT"]
         del df["HEADER"]
+    df = df[df["TEXT"].map(lambda a: a.strip() != '')]  # Удалим строки с пустыми TEXT
+    # df['USER_MODIFIED'] = df['USER_MODIFIED'].map(lambda a: a or '')
     return df
 
 
@@ -115,9 +117,7 @@ def select_by_date_modified(cnn, object_type, last_date_update):
 
 
 def select_all_by_date_modified(cnn, last_date_update):
-    df = pd.concat([select_by_date_modified(cnn, t, last_date_update) for t in texts_sql.keys()])
-    df = df[df["TEXT"].map(lambda a: a.strip() != '')]  # Удалим строки с пустыми TEXT
-    return df
+    return pd.concat([select_by_date_modified(cnn, t, last_date_update) for t in texts_sql.keys()])
 
 
 def select_types_in_folder_or_date_modified(cnn, object_type, folder_objects, num, interval_name):
@@ -138,7 +138,7 @@ def select_objects_in_folder_or_date_modified(cnn, folder_path, num, date_modifi
     folder_objects_df = dirs.objects_in_folder(folder_path)
     s = select_types_in_folder_or_date_modified
     df = pd.concat([s(cnn, t, folder_objects_df, num, date_modified_interval) for t in texts_sql.keys()])
-    df = df[df["TEXT"].map(lambda a: a.strip() != '')]  # Удалим строки с пустыми TEXT
+    # df = df[df["TEXT"].map(lambda a: a.strip() != '')]  # Удалим строки с пустыми TEXT
     return df
 
 

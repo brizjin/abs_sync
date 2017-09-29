@@ -88,6 +88,7 @@ class SelectTest(unittest.TestCase):
     def test_select_objects_in_folder_or_date_modified_func(self):
         folder_path = os.path.join(config.git_folder, cnn.dsn)
         df = select_objects_in_folder_or_date_modified(cnn, folder_path, 1, 'd')
+
         self.assertGreater(len(df), 0)
         print(df)
 
