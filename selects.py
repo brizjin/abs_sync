@@ -4,8 +4,10 @@ import cx_Oracle
 import pandas as pd
 
 import dirs
+from strings import nstr
 
 logger = logging.getLogger('root')
+pd.options.display.width = 300
 
 
 def read_value_default(v):
@@ -44,109 +46,105 @@ def select(cnn, sql_text, read_value=read_value_default):
     return df
 
 
-select_sql = "select * from (%s)"
+select_sql = "SELECT * FROM (%s)"
 
-methods_sql = """
-            with types as (select 'EXECUTE' type, 'body' EXT from dual
-               union select 'VALIDATE', 'validate' from dual
-               union select 'VBSCRIPT', 'script' from dual
-               union select 'PUBLIC', 'globals' from dual
-               union select 'PRIVATE', 'locals' from dual)
-            select m.class_id
+methods_sql = u"""
+            WITH types AS (SELECT 'EXECUTE' type, 'body' EXT FROM dual
+               UNION SELECT 'VALIDATE', 'validate' FROM dual
+               UNION SELECT 'VBSCRIPT', 'script' FROM dual
+               UNION SELECT 'PUBLIC', 'globals' FROM dual
+               UNION SELECT 'PRIVATE', 'locals' FROM dual)
+            SELECT m.class_id
               , m.short_name
               , m.modified
               , m.user_modified
-              ,cursor(select s.text from sources s where s.name = m.id and s.type = t.type order by s.line) TEXT
+              ,CURSOR(SELECT s.text FROM sources s WHERE s.name = m.id AND s.type = t.type ORDER BY s.line) TEXT
               ,t.EXT EXTENTION
-            from methods m
-            cross join types t
+            FROM methods m
+            CROSS JOIN types t
             --inner join METHODS m on m.id = s.name
             --where m.class_id = 'BRK_MSG' and m.short_name = 'L'
             --order by m.class_id, m.short_name"""
 
-triggers_sql = """select * from (
-            select substr(tr.table_name,instr(tr.table_name,'#')+1) CLASS_ID
+triggers_sql = u"""SELECT * FROM (
+            SELECT substr(tr.table_name,instr(tr.table_name,'#')+1) CLASS_ID
               , tr.TRIGGER_NAME SHORT_NAME
               , to_date(obj.TIMESTAMP, 'yyyy-mm-dd:hh24:mi:ss') MODIFIED
               , '' USER_MODIFIED
               , 'CREATE OR REPLACE TRIGGER ' || tr.description HEADER
               , tr.trigger_body TEXT
               , 'trg' EXTENTION
-            from all_triggers tr
-            inner join user_objects obj on obj.OBJECT_NAME = tr.TRIGGER_NAME
+            FROM all_triggers tr
+            INNER JOIN user_objects obj ON obj.OBJECT_NAME = tr.TRIGGER_NAME
             )
             --where tr.trigger_name = 'BKB_DEL_MAIN_DOCUM'
             """
 
-creteria_sql = """select cr.class_id
+creteria_sql = r"""SELECT cr.class_id
   , cr.short_name
   , cr.MODIFIED
-  , '' USER_MODIFIED
+  , regexp_replace((SELECT d.USER_ID FROM DIARY_CRITERIA d WHERE d.criteria_id = cr.id AND d.ACTION IN ('INSERTED','UPDATED') AND d.TIME
+  = (SELECT max(d.TIME) FROM DIARY_CRITERIA d WHERE d.criteria_id = cr.id AND d.ACTION IN ('INSERTED','UPDATED'))),'.*\.(.*)','\1') USER_MODIFIED
   , cr.condition
   , cr.order_by
   , cr.group_by
   , '' EXTENTION
-from criteria cr
+FROM criteria cr
 --where cr.class_id = 'MAIN_DOCUM'
 --and cr.short_name = 'VW_CRIT_BRK_BP_DOCS_BP'"""
 
 texts_sql = {'METHOD': methods_sql, 'VIEW': creteria_sql, 'TRIGGER': triggers_sql}
-
-
-def select_methods_by_name(cnn, class_id, short_name):
-    sql = methods_sql + "\nwhere class_id = '%s' and short_name = '%s'" % (class_id, short_name)
-    return select(cnn, sql, read_value_cursor)
-
-
-def where_clause_by_name(objs):
-    objs = objs.copy()
-    objs.SHORT_NAME = objs.SHORT_NAME.apply(lambda a: "'%s'" % a.upper())
-    group = objs.groupby(["CLASS_ID"])
-    condition = "CLASS_ID = '%s' and SHORT_NAME in (%s)"
-    where_clause = "\n or ".join(
-        condition % (class_id, ",".join(rows["SHORT_NAME"])) for class_id, rows in group)
-    return where_clause
-
-
-def select_all_methods_in_folder(cnn, folder_name):
-    df = dirs.objects_in_folder(folder_name)
-    where_clause = where_clause_by_name(df[df["TYPE"] == 'METHOD'])
-    sql = methods_sql + "\nwhere " + where_clause
-    return select(cnn, sql, read_value_cursor)
-
-
 interval = {'d': 'day', 'h': 'hour', 'm': 'minute', 's': 'second'}
 
 
+def norm_object(df, type):
+    if type == 'VIEW':
+        df["TEXT"] = df["CONDITION"].map(nstr) + df["ORDER_BY"].map(nstr) + df["GROUP_BY"].map(nstr)
+        df = df.drop(["CONDITION", "ORDER_BY", "GROUP_BY"], axis=1)
+    elif type == 'TRIGGER':
+        df["TEXT"] = df["HEADER"].map(nstr) + df["TEXT"]
+        del df["HEADER"]
+    return df
+
+
+def select_by_date_modified(cnn, object_type, last_date_update):
+    sql = texts_sql[object_type] + """\n where modified > to_date('%s','dd.mm.yyyy hh24:mi:ss')
+                            order by modified nulls last
+                            """ % last_date_update
+    return norm_object(select(cnn, sql, read_value_cursor), object_type)
+
+
+def select_all_by_date_modified(cnn, last_date_update):
+    df = pd.concat([select_by_date_modified(cnn, t, last_date_update) for t in texts_sql.keys()])
+    df = df[df["TEXT"].map(lambda a: a.strip() != '')]  # Удалим строки с пустыми TEXT
+    return df
+
+
 def select_types_in_folder_or_date_modified(cnn, object_type, folder_objects, num, interval_name):
-    where_by_name = where_clause_by_name(folder_objects[folder_objects["TYPE"] == object_type])
+    objs = folder_objects[folder_objects["TYPE"] == object_type].copy()
+    objs.SHORT_NAME = objs.SHORT_NAME.apply(lambda a: "'%s'" % a.upper())
+    group = objs.groupby(["CLASS_ID"])
+    condition = "CLASS_ID = '%s' and SHORT_NAME in (%s)"
+    where_by_name = "\n or ".join(condition % (class_id, ",".join(rows["SHORT_NAME"])) for class_id, rows in group)
     sql = texts_sql[object_type] + """\n where (%s) or
                     modified > sysdate - interval '%s' %s
-                    order by modified nulls last""" % (where_by_name, num, interval[interval_name])
-    # logger.info(sql)
-    df = select(cnn, sql, read_value_cursor)
+                    --order by modified nulls last
+                    """ % (where_by_name, num, interval[interval_name])
+    df = norm_object(select(cnn, sql, read_value_cursor), object_type)
     return df
 
 
 def select_objects_in_folder_or_date_modified(cnn, folder_path, num, date_modified_interval):
-    # folder_path = r"C:\Users\BryzzhinIS\Documents\Хранилища\sync_script\dbs\day"
-    nstr = lambda a: a or ''
     folder_objects_df = dirs.objects_in_folder(folder_path)
-    method_df = select_types_in_folder_or_date_modified(cnn, 'METHOD', folder_objects_df, num, date_modified_interval)
-    view_df = select_types_in_folder_or_date_modified(cnn, 'VIEW', folder_objects_df, num, date_modified_interval)
-    view_df["TEXT"] = view_df["CONDITION"].map(nstr) + view_df["ORDER_BY"].map(nstr) + view_df["GROUP_BY"].map(nstr)
-    view_df = view_df.drop(["CONDITION", "ORDER_BY", "GROUP_BY"], axis=1)
-    trigger_df = select_types_in_folder_or_date_modified(cnn, 'TRIGGER', folder_objects_df, num, date_modified_interval)
-    trigger_df["TEXT"] = trigger_df["HEADER"].map(nstr) + trigger_df["TEXT"]
-    del trigger_df["HEADER"]
-    df = pd.concat([method_df, view_df, trigger_df])
+    s = select_types_in_folder_or_date_modified
+    df = pd.concat([s(cnn, t, folder_objects_df, num, date_modified_interval) for t in texts_sql.keys()])
     df = df[df["TEXT"].map(lambda a: a.strip() != '')]  # Удалим строки с пустыми TEXT
     return df
 
 
 def select_tune_date_update(cnn):
-    sql = """select to_date(Z$FP_TUNE_LIB.get_str_value('BRK_DB_UPDATE_DATE',throw_error=>'0'),'dd/mm/yyyy hh24:mi:ss') date_update
-             from dual"""
+    sql = """SELECT to_date(Z$FP_TUNE_LIB.get_str_value('BRK_DB_UPDATE_DATE',throw_error=>'0'),'dd/mm/yyyy hh24:mi:ss') date_update
+             FROM dual"""
     tune = select(cnn, sql)["DATE_UPDATE"][0]
     logger.info("Tune selected: %s" % tune)
     return tune

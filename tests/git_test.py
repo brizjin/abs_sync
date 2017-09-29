@@ -2,11 +2,11 @@ import os
 import unittest
 
 import cx_Oracle
-from git import Repo
 
 import config
 import log
 from selects import *
+from git_funcs import clone_or_open_repo, init_git_db
 
 git_url = "http://git.brc.local:3000/ivan.bryzzhin/abs.git"
 os.environ["ORACLE_HOME"] = "C:/app/BryzzhinIS/product/11.2.0/client_1/"
@@ -16,18 +16,7 @@ cnn = cx_Oracle.connect(db_cnn_str)
 db_name = cnn.dsn
 
 logger = log.log_init("root")
-
-
-def clone_or_open_repo(folder_path):
-    logger.info("check repo " + folder_path)
-    if not os.path.isdir(os.path.join(folder_path, '.git')):
-        logger.info("clone repo for %s" % db_name)
-        repo = Repo.clone_from(git_url, folder_path)
-    else:
-        repo = Repo(folder_path)
-    logger.info("open repo %s is_dirty: %s" % (db_name, repo.is_dirty()))
-    return repo
-
+logger.info("cnn get_test")
 
 class GitNewDatabaseTest(unittest.TestCase):
     def setUp(self):
@@ -83,3 +72,9 @@ class GitNewDatabaseTest(unittest.TestCase):
             committer = Actor("A committer", "committer@example.com")
 
             index.commit("my commit message", author=author, committer=committer)
+
+    def test_inti_git(self):
+        init_git_db(cnn)
+        
+    def test_update_git(self):
+        pass

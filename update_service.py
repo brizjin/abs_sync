@@ -3,95 +3,20 @@ import os
 import re
 
 import cx_Oracle
-import pandas as pd
 from git import Repo
+
+import config
+import dirs
+from selects import create_tune_date_update, select_objects_in_folder_or_date_modified
 
 connection_string = "ibs/HtuRhtl@day"
 
 logger = logging.getLogger('root')
 
 
-def select(cnn, sql_text):
-    # conn = pool.acquire()
-
-    def read_value(v):
-        if v and type(v) in (cx_Oracle.CLOB, cx_Oracle.BLOB, cx_Oracle.LOB):
-            return v.read()
-        return v
-
-    def read():
-        cursor = cnn.cursor()
-        cursor.execute(sql_text)
-        rows = [[read_value(v) for v in row] for row in cursor]
-        # print(cursor.description)
-        names = [x[0] for x in cursor.description]
-        cursor.close()
-        return pd.DataFrame(rows, columns=names)
-
-    df = read()
-    # pool.release(conn)
-    return df
 
 
-# def execute_plsql(cnn, pl_sql_text):
-#     # conn = pool.acquire()
-#     cursor = cnn.cursor()
-#     cursor.execute(pl_sql_text)
-#     cursor.close()
-#     # pool.release(conn)
-#
-#
-# def select_tune_date_update(cnn):
-#     sql = """select to_date(Z$FP_TUNE_LIB.get_str_value('BRK_DB_UPDATE_DATE',throw_error=>'0'),'dd/mm/yyyy hh24:mi:ss') date_update
-#              from dual"""
-#     tune = select(cnn, sql)["DATE_UPDATE"][0]
-#     logger.info("Tune selected: %s" % tune)
-#     return tune
-#
-#
-# def create_tune_date_update(cnn):
-#     logger.info("Create tune")
-#     sql = """
-#         declare
-#           i integer := rtl.open;
-#         begin
-#
-#             declare
-#                 plp$ID_1  number;
-#               V_CODE  varchar2(200) := 'BRK_DB_UPDATE_DATE';
-#               V_TUNE  number;
-#               V_VALUE varchar2(200) := TO_CHAR(SYSDATE,'dd/mm/yyyy hh24:mi:ss');
-#             begin
-#               begin
-#                 declare
-#                   cursor c_obj is
-#                     select  a1.id
-#                     from Z#FP_TUNE a1
-#                     where a1.C_CODE = V_CODE;
-#                 begin
-#                   plp$ID_1 := NULL;
-#                   for plp$c_obj in c_obj loop
-#                     plp$ID_1 := plp$c_obj.id; exit;
-#                   end loop;
-#                   if plp$ID_1 is NULL then raise rtl.NO_DATA_FOUND; end if;
-#                 end;
-#                 V_TUNE := plp$ID_1;
-#               exception
-#               when RTL.NO_DATA_FOUND then
-#                 V_TUNE := Z$FP_TUNE_NEW#AUTO.NEW#AUTO_EXECUTE(NULL,'FP_TUNE',V_CODE,'БРК. Дата обновления тестовой базы с боевой','BRK','STRING',null,'True - обрабочкики включены',false,null,false);
-#               end;
-#               plp$ID_1 := Z$FP_TUNE_LIB.SET_VALUE(V_CODE,V_VALUE);
-#             end;
-#             commit;
-#             rtl.close(i);
-#         end;"""
-#     execute_plsql(cnn, sql)
-#     logger.info("Tune created")
 
-
-# def job():
-#     if not select_tune_date_update():
-#         create_tune_date_update()
 
 
 def create_jobs():
@@ -131,6 +56,7 @@ def job():
     os.environ["ORACLE_HOME"] = "C:/app/BryzzhinIS/product/11.2.0/client_1/"
     os.environ['NLS_LANG'] = '.AL32UTF8'
     cnn = cx_Oracle.connect("ibs/HtuRhtl@day")
+    logger.info("cnn update_service")
     print(select(cnn, """select m.class_id, m.short_name, m.package_name, m.modified, m.user_modified, s.type, s.line, s.text a--, m.user_driven, m.*
 from sources s
 inner join METHODS m on m.id = s.name
