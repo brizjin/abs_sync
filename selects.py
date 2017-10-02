@@ -117,7 +117,9 @@ def select_by_date_modified(cnn, object_type, last_date_update):
 
 
 def select_all_by_date_modified(cnn, last_date_update):
-    return pd.concat([select_by_date_modified(cnn, t, last_date_update) for t in texts_sql.keys()])
+    df = pd.concat([select_by_date_modified(cnn, t, last_date_update) for t in texts_sql.keys()])
+    df = df.sort_values('MODIFIED', ascending=True)
+    return df
 
 
 def select_types_in_folder_or_date_modified(cnn, object_type, folder_objects, num, interval_name):
