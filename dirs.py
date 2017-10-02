@@ -42,7 +42,7 @@ def write_object(project_folder, class_id, short_name, extention, text):
             f.write(part)
 
 
-def write_row(project_folder, row):
+def write_object_from_row(project_folder, row):
     # logger.info("write_row to folder %s" % project_folder)
     write_object(project_folder, row["CLASS_ID"], row["SHORT_NAME"], row["EXTENTION"], row["TEXT"])
 

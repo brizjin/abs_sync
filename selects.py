@@ -1,8 +1,10 @@
 import logging
 
 import cx_Oracle
+import os
 import pandas as pd
 
+import config
 import dirs
 from strings import nstr
 
@@ -93,6 +95,8 @@ FROM criteria cr
 --where cr.class_id = 'MAIN_DOCUM'
 --and cr.short_name = 'VW_CRIT_BRK_BP_DOCS_BP'"""
 
+
+
 texts_sql = {'METHOD': methods_sql, 'VIEW': creteria_sql, 'TRIGGER': triggers_sql}
 interval = {'d': 'day', 'h': 'hour', 'm': 'minute', 's': 'second'}
 
@@ -118,7 +122,8 @@ def select_by_date_modified(cnn, object_type, last_date_update):
 
 def select_all_by_date_modified(cnn, last_date_update):
     df = pd.concat([select_by_date_modified(cnn, t, last_date_update) for t in texts_sql.keys()])
-    df = df.sort_values('MODIFIED', ascending=True)
+    # if len(df) > 0:
+    #     df = df.sort_values('MODIFIED', ascending=True)
     return df
 
 
@@ -136,8 +141,9 @@ def select_types_in_folder_or_date_modified(cnn, object_type, folder_objects, nu
     return df
 
 
-def select_objects_in_folder_or_date_modified(cnn, folder_path, num, date_modified_interval):
-    folder_objects_df = dirs.objects_in_folder(folder_path)
+def select_objects_in_folder_or_date_modified(cnn, num, date_modified_interval):
+    git_dir = os.path.join(config.git_folder, cnn.dsn)
+    folder_objects_df = dirs.objects_in_folder(git_dir)
     s = select_types_in_folder_or_date_modified
     df = pd.concat([s(cnn, t, folder_objects_df, num, date_modified_interval) for t in texts_sql.keys()])
     # df = df[df["TEXT"].map(lambda a: a.strip() != '')]  # Удалим строки с пустыми TEXT
@@ -208,3 +214,12 @@ def delete_tune_date_update(cnn):
          rtl.close(i);
         end;"""
     select(cnn, sql)
+
+def select_max_object_date_modified(cnn):
+    sql = """select max(t.MODIFIED) MODIFIED from (
+            select m.modified from methods m
+        union all select  to_date(obj.TIMESTAMP, 'yyyy-mm-dd:hh24:mi:ss') MODIFIED FROM all_triggers tr
+        INNER JOIN user_objects obj ON obj.OBJECT_NAME = tr.TRIGGER_NAME
+        union all select c.modified
+        from criteria c) t"""
+    return select(cnn, sql)
