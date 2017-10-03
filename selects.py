@@ -1,7 +1,7 @@
 import logging
+import os
 
 import cx_Oracle
-import os
 import pandas as pd
 
 import config
@@ -95,8 +95,6 @@ FROM criteria cr
 --where cr.class_id = 'MAIN_DOCUM'
 --and cr.short_name = 'VW_CRIT_BRK_BP_DOCS_BP'"""
 
-
-
 texts_sql = {'METHOD': methods_sql, 'VIEW': creteria_sql, 'TRIGGER': triggers_sql}
 interval = {'d': 'day', 'h': 'hour', 'm': 'minute', 's': 'second'}
 
@@ -127,25 +125,25 @@ def select_all_by_date_modified(cnn, last_date_update):
     return df
 
 
-def select_types_in_folder_or_date_modified(cnn, object_type, folder_objects, num, interval_name):
+def select_types_in_folder_or_date_modified(cnn, object_type, folder_objects, update_from_date):
     objs = folder_objects[folder_objects["TYPE"] == object_type].copy()
     objs.SHORT_NAME = objs.SHORT_NAME.apply(lambda a: "'%s'" % a.upper())
     group = objs.groupby(["CLASS_ID"])
     condition = "CLASS_ID = '%s' and SHORT_NAME in (%s)"
     where_by_name = "\n or ".join(condition % (class_id, ",".join(rows["SHORT_NAME"])) for class_id, rows in group)
-    sql = texts_sql[object_type] + """\n where (%s) or
-                    modified > sysdate - interval '%s' %s
+    sql = texts_sql[object_type] + """\n where (%s) or                    
+                    modified > to_date('%s','dd.mm.yyyy hh24:mi:ss')
                     --order by modified nulls last
-                    """ % (where_by_name, num, interval[interval_name])
+                    """ % (where_by_name, update_from_date)
     df = norm_object(select(cnn, sql, read_value_cursor), object_type)
     return df
 
 
-def select_objects_in_folder_or_date_modified(cnn, num, date_modified_interval):
+def select_objects_in_folder_or_date_modified(cnn, update_from_date):
     git_dir = os.path.join(config.git_folder, cnn.dsn)
     folder_objects_df = dirs.objects_in_folder(git_dir)
     s = select_types_in_folder_or_date_modified
-    df = pd.concat([s(cnn, t, folder_objects_df, num, date_modified_interval) for t in texts_sql.keys()])
+    df = pd.concat([s(cnn, t, folder_objects_df, update_from_date) for t in texts_sql.keys()])
     # df = df[df["TEXT"].map(lambda a: a.strip() != '')]  # Удалим строки с пустыми TEXT
     return df
 
@@ -154,7 +152,7 @@ def select_tune_date_update(cnn):
     sql = """SELECT to_date(Z$FP_TUNE_LIB.get_str_value('BRK_DB_UPDATE_DATE',throw_error=>'0'),'dd/mm/yyyy hh24:mi:ss') date_update
              FROM dual"""
     tune = select(cnn, sql)["DATE_UPDATE"][0]
-    logger.info("Tune selected: %s" % tune)
+    # logger.info("Tune selected: %s" % tune)
     return tune
 
 
@@ -215,11 +213,12 @@ def delete_tune_date_update(cnn):
         end;"""
     select(cnn, sql)
 
+
 def select_max_object_date_modified(cnn):
-    sql = """select max(t.MODIFIED) MODIFIED from (
-            select m.modified from methods m
-        union all select  to_date(obj.TIMESTAMP, 'yyyy-mm-dd:hh24:mi:ss') MODIFIED FROM all_triggers tr
+    sql = """SELECT max(t.MODIFIED) MODIFIED FROM (
+            SELECT m.modified FROM methods m
+        UNION ALL SELECT  to_date(obj.TIMESTAMP, 'yyyy-mm-dd:hh24:mi:ss') MODIFIED FROM all_triggers tr
         INNER JOIN user_objects obj ON obj.OBJECT_NAME = tr.TRIGGER_NAME
-        union all select c.modified
-        from criteria c) t"""
+        UNION ALL SELECT c.modified
+        FROM criteria c) t"""
     return select(cnn, sql)

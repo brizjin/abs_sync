@@ -7,8 +7,9 @@ import schedule
 from git import Actor
 
 import git_funcs
+import log
 from dirs import write_object_from_row
-from git_funcs import clone_or_open_repo, init_git_db
+from git_funcs import clone_or_open_repo
 from selects import *
 
 git_url = "http://git.brc.local:3000/ivan.bryzzhin/abs.git"
@@ -81,9 +82,6 @@ class GitNewDatabaseTest(unittest.TestCase):
             committer = Actor("A committer", "committer@example.com")
 
             index.commit("my commit message", author=author, committer=committer)
-
-    def test_inti_git(self):
-        init_git_db(cnn)
 
     def test_update_git(self):
         git_dir = os.path.join(config.git_folder, cnn.dsn)
@@ -177,47 +175,39 @@ class GitNewDatabaseTest(unittest.TestCase):
         print(df)
 
     def test_comit_by_job(self):
-        # global last_date_update
-        # last_date_update = '27.09.2017 18:30:30'
-        # last_date_update = datetime.datetime.now() - datetime.timedelta(days=1)
         logger.debug("start")
 
         def update():
             global last_date_update
-            # if not select_tune_date_update(cnn) or not last_date_update:
+            df = None
+            if not last_date_update:
+                last_date_update = select_max_object_date_modified(cnn)["MODIFIED"][0] - datetime.timedelta(days=7)
+
+            repo = clone_or_open_repo(os.path.join(config.git_folder, cnn.dsn))
+
             if not select_tune_date_update(cnn):
                 logger.debug("update init_git_db")
-                time_before_commit = datetime.datetime.now()
-                init_git_db(cnn)
-                last_date_update = time_before_commit - datetime.timedelta(seconds=5)
+                create_tune_date_update(cnn)
+                df = select_objects_in_folder_or_date_modified(cnn, last_date_update.strftime('%d.%m.%Y %H:%M:%S'))
             else:
+                logger.debug("select object on date %s" % last_date_update.strftime('%d.%m.%Y %H:%M:%S'))
+                df = select_all_by_date_modified(cnn, last_date_update.strftime('%d.%m.%Y %H:%M:%S'))
+            if len(df) > 0:
                 logger.debug("update by_time")
-                git_dir = os.path.join(config.git_folder, cnn.dsn)
-                repo = clone_or_open_repo(git_dir)
                 branch_name = git_funcs.tune_branch_name(cnn)
                 if branch_name in repo.branches:
                     repo.heads[branch_name].checkout()
                 else:
                     repo.create_head(branch_name, 'master').checkout()
-
-                # datetime.datetime.now() - datetime.timedelta(minutes=1)).strftime('%d.%m.%Y %H:%M:%S')
-                # time_before_commit = datetime.datetime.now()
-                time_before_commit = select_max_object_date_modified(cnn)["MODIFIED"][0]
-                if not last_date_update:
-                    last_date_update = time_before_commit - datetime.timedelta(seconds=3000)
-                logger.debug("select object on date %s" % last_date_update.strftime('%d.%m.%Y %H:%M:%S'))
-                df = select_all_by_date_modified(cnn, last_date_update.strftime('%d.%m.%Y %H:%M:%S'))
-                if len(df) > 0:
-                    git_funcs.commit_by_dataframe(repo, df, cnn.dsn)
-                last_date_update = time_before_commit  # - datetime.timedelta(seconds=5)
-                if len(df) > 0:
-                    print(df)
+                git_funcs.commit_by_dataframe(repo, df, cnn.dsn)
+                last_date_update = select_max_object_date_modified(cnn)["MODIFIED"][0]
+            else:
+                logger.debug("up-to-date")
 
         schedule.every(5).seconds.do(update)
 
         while True:
             schedule.run_pending()
-            # logger.debug("sleep 1")
             time.sleep(1)
 
     def test_time_now(self):
@@ -229,3 +219,101 @@ class GitNewDatabaseTest(unittest.TestCase):
         print(select_max_object_date_modified(cnn))
         # print(datetime.datetime.strptime(select_max_object_date_modified(cnn)["MODIFIED"][0], '%Y-%m-%d %H:%M:%S') - datetime.timedelta(seconds=5))
         print(select_max_object_date_modified(cnn)["MODIFIED"][0] - datetime.timedelta(seconds=5))
+
+    def test_git_update(self):
+        # schedule.every(5).seconds.do(git_funcs.update, cx_Oracle.connect("ibs/HtuRhtl@mideveryday"))
+        # def run_threaded(connection_string):
+        #     cnn = cx_Oracle.connect(connection_string)
+        #     log.log_init(cnn.dsn)
+        #     job_thread = threading.Thread(target=lambda: git_funcs.update(cnn))
+        #     job_thread.start()
+        def do_schedule(connection_string):
+            cnn = cx_Oracle.connect(connection_string)
+            log.log_init(cnn.dsn)
+            schedule.every(5).seconds.do(git_funcs.update, cnn)
+
+        # schedule.every(5).seconds.do(run_threaded, "ibs/HtuRhtl@lw-abs-abs")
+        # schedule.every(5).seconds.do(run_threaded, "ibs/HtuRhtl@mideveryday")
+        do_schedule("ibs/HtuRhtl@lw-abs-abs")
+        do_schedule("ibs/HtuRhtl@mideveryday")
+
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
+            # git_funcs.update(cnn)
+
+    def test_commit_authorized_time(self):
+        # repos_dir = r"C:\Users\BryzzhinIS\Documents\Хранилища\sync_script"
+        # repo_dir = os.path.join(repos_dir, 'dbs', 'lw-abs-abs')
+        # repo = clone_or_open_repo(repo_dir)
+        # repo.git.add(A=True)
+        # author = Actor('sources_sync_job', '@mail')
+        # committer = Actor('sources_sync_job', '@mail')
+        # time_str = "2012-07-24T23:14:29-07:00"
+        # time_str = "2012-07-24T23:14:29"
+        # repo.index.commit('test', author=author, committer=committer, author_date=time_str)
+
+        last_date_update = '28.09.2017 18:30:30'
+        df = select_all_by_date_modified(cnn, last_date_update)
+        df = df.sort_values('MODIFIED', ascending=False)
+        # localtz = pytz.timezone('Europe/Moscow')
+        # time_str = localtz.localize(df.iloc[0]["MODIFIED"]).strftime('%d.%m.%YT%H:%M:%S%z')
+        time_str = (df.iloc[0]["MODIFIED"] + datetime.timedelta(hours=-3)).strftime('%d.%m.%YT%H:%M:%S')
+        print(time_str)
+        repos_dir = r"C:\Users\BryzzhinIS\Documents\Хранилища\sync_script"
+        # repo_dir = os.path.join(repos_dir, 'dbs', 'lw-abs-abs')
+        repo_dir = os.path.join(repos_dir, 'dbs', 'mideveryday')
+        repo = clone_or_open_repo(repo_dir)
+        repo.git.add(A=True)
+        author = Actor('sources_sync_job', '@mail')
+        committer = Actor('sources_sync_job', '@mail')
+        # time_str = "2012-07-24T23:14:29-07:00"
+        # time_str = "2012-07-24T23:14:29"
+        repo.index.commit('test', author=author, committer=committer, author_date=time_str)
+        # #print(pytz.utc)
+
+    def test_push(self):
+        repos_dir = r"C:\Users\BryzzhinIS\Documents\Хранилища\sync_script"
+        # repo_dir = os.path.join(repos_dir, 'dbs', 'lw-abs-abs')
+        repo_dir = os.path.join(repos_dir, 'dbs', 'mideveryday')
+        repo = clone_or_open_repo(repo_dir)
+        print(repo.remotes)
+        local_branch = 'mideveryday_03.10.2017_15.26'
+        remote_branch = local_branch
+        repo.remotes['origin'].push(refspec='{}:{}'.format(local_branch, remote_branch))
+
+    def test_pull(self):
+        repos_dir = r"C:\Users\BryzzhinIS\Documents\Хранилища\sync_script"
+        repo_dir = os.path.join(repos_dir, 'dbs', 'lw-abs-abs')
+        # repo_dir = os.path.join(repos_dir, 'dbs', 'mideveryday')
+        repo = clone_or_open_repo(repo_dir)
+        # print(repo.remotes)
+        local_branch = 'lw-abs-abs_26.09.2017_13.17'
+        remote_branch = 'origin/%s' % local_branch
+
+        # print(repo.refs['origin/%s' % local_branch])
+        # print(repo.branches)
+        try:
+            repo.refs[remote_branch]
+        except IndexError:
+            pass
+        # repo.head.reset(commit=repo.refs[remote_branch], index=True, working_tree=True)
+
+    def test_job(self):
+        def do_schedule(connection_string):
+            cnn_object = cx_Oracle.connect(connection_string)
+            log.log_init(cnn_object.dsn)
+            schedule.every(5).seconds.do(git_funcs.update, cnn_object)
+
+        do_schedule("ibs/HtuRhtl@lw-abs-abs")
+        # do_schedule("ibs/HtuRhtl@mideveryday")
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
+
+    def test_select_update(self):
+
+        last_date_update = '27.09.2017 18:30:30'
+        last_date_update = '02.10.2017 17:00:31'
+        df = select_all_by_date_modified(cnn, last_date_update)
+        print(df)
