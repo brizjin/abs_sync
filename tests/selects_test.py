@@ -1,9 +1,8 @@
-import os
 import unittest
 
 import cx_Oracle
+import datetime
 
-import config
 import log
 from selects import *
 
@@ -141,3 +140,21 @@ class SelectTest(unittest.TestCase):
         df = select_all_by_date_modified2(cnn, last_date_update)
 
         print(df)
+
+    def test_select_by_date_modified(self):
+        last_date_update = '02.10.2017 17:00:31'
+        last_date_update = '27.09.2017 10:48:48'
+        # df = select_all_by_date_modified(cnn, last_date_update)
+        db_cnn_str = "ibs/HtuRhtl@lw-abs-abs"
+        cnn = cx_Oracle.connect(db_cnn_str)
+        #df = select(cnn, "select sysdate from dual").iloc[0]['SYSDATE']
+        sysdate = select_sysdate(cnn)
+        print(datetime.timedelta(days=(datetime.datetime.now() - sysdate).days))
+        print(sysdate)
+        # df = select_all_by_date_modified(cnn, last_date_update)
+        # df = select_max_object_date_modified(cnn)
+        # df = select_sysdate(cnn)
+        # print(df)
+
+    def test_select_users(self):
+        print(",\n".join(["'%s'" % a for a in select_users(cnn)['USER_MODIFIED']]))

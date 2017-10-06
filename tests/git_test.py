@@ -305,15 +305,36 @@ class GitNewDatabaseTest(unittest.TestCase):
             log.log_init(cnn_object.dsn)
             schedule.every(5).seconds.do(git_funcs.update, cnn_object)
 
-        do_schedule("ibs/HtuRhtl@lw-abs-abs")
+        # do_schedule("ibs/HtuRhtl@day")
         # do_schedule("ibs/HtuRhtl@mideveryday")
+        # do_schedule("ibs/HtuRhtl@msb")
+        do_schedule("ibs/HtuRhtl@lw-ass-abs")
+        # do_schedule("ibs/HtuRhtl@lw-abs-abs")
+        # do_schedule("ibs/HtuRhtl@lw-p2-abs")
+        # do_schedule("ibs/HtuRhtl@midabs")
         while True:
             schedule.run_pending()
             time.sleep(1)
 
-    def test_select_update(self):
+    def test_fetch_master(self):
+        repos_dir = r"C:\Users\BryzzhinIS\Documents\Хранилища\sync_script"
+        repo_dir = os.path.join(repos_dir, 'dbs', 'mideveryday')
+        repo = clone_or_open_repo(repo_dir)
+        #try:
+        repo.heads['master'].checkout()
+        repo.remotes['origin'].fetch(refspec='{}'.format('master'))
+        repo.head.reset(commit=repo.refs['origin/master'], index=True, working_tree=True)
+        #
+        #repo.create_head(branch_name, 'master').checkout()
 
-        last_date_update = '27.09.2017 18:30:30'
-        last_date_update = '02.10.2017 17:00:31'
-        df = select_all_by_date_modified(cnn, last_date_update)
-        print(df)
+
+    def test_discard_changes(self):
+        repos_dir = r"C:\Users\BryzzhinIS\Documents\Хранилища\sync_script"
+        repo_dir = os.path.join(repos_dir, 'dbs', 'midabs')
+        repo = clone_or_open_repo(repo_dir)
+        repo.head.reset(commit='HEAD', index=True, working_tree=True)
+        # repo.git.clean('-xdf')
+        #try:
+        #repo.index.checkout([filename]. force=True)
+        #
+        #repo.create_head(branch_name, 'master').checkout()

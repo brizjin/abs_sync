@@ -2,8 +2,9 @@
 <project version="4">
   <component name="Encoding">
     <file url="file://$PROJECT_DIR$/logs/lw-abs-abs.log" charset="windows-1251" />
+    <file url="file://$PROJECT_DIR$/logs/midabs.log" charset="windows-1251" />
+    <file url="file://$PROJECT_DIR$/logs/mideveryday.log" charset="windows-1251" />
     <file url="file://$PROJECT_DIR$/logs/root.log" charset="windows-1251" />
-    <file url="file://$PROJECT_DIR$/update_service.log" charset="windows-1251" />
     <file url="file://$PROJECT_DIR$/venv/Scripts/activate.bat" charset="IBM866" />
   </component>
 </project>
