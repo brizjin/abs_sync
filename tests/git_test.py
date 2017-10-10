@@ -1,4 +1,5 @@
 import datetime
+import re
 import time
 import unittest
 
@@ -15,9 +16,9 @@ from selects import *
 git_url = "http://git.brc.local:3000/ivan.bryzzhin/abs.git"
 os.environ["ORACLE_HOME"] = "C:/app/BryzzhinIS/product/11.2.0/client_1/"
 os.environ['NLS_LANG'] = '.AL32UTF8'
-db_cnn_str = "ibs/HtuRhtl@mideveryday"
-cnn = cx_Oracle.connect(db_cnn_str)
-db_name = cnn.dsn
+# db_cnn_str = "ibs/HtuRhtl@mideveryday"
+# cnn = cx_Oracle.connect(db_cnn_str)
+# db_name = cnn.dsn
 
 # logger = log.log_init("root")
 # logger.info("cnn get_test")
@@ -297,13 +298,15 @@ class GitNewDatabaseTest(unittest.TestCase):
             repo.refs[remote_branch]
         except IndexError:
             pass
-        # repo.head.reset(commit=repo.refs[remote_branch], index=True, working_tree=True)
+            # repo.head.reset(commit=repo.refs[remote_branch], index=True, working_tree=True)
 
     def test_job(self):
         def do_schedule(connection_string):
-            cnn_object = cx_Oracle.connect(connection_string)
-            log.log_init(cnn_object.dsn)
-            schedule.every(5).seconds.do(git_funcs.update, cnn_object)
+            # cnn_object = cx_Oracle.connect(connection_string)
+            m = re.match(r"(?P<user>.+)/(?P<pass>.+)@(?P<dbname>.+)", connection_string)
+            db_name = m.group('dbname')
+            log.log_init(db_name)
+            schedule.every(5).seconds.do(git_funcs.update, connection_string)
 
         do_schedule("ibs/HtuRhtl@day")
         do_schedule("ibs/HtuRhtl@mideveryday")
@@ -320,13 +323,12 @@ class GitNewDatabaseTest(unittest.TestCase):
         repos_dir = r"C:\Users\BryzzhinIS\Documents\Хранилища\sync_script"
         repo_dir = os.path.join(repos_dir, 'dbs', 'mideveryday')
         repo = clone_or_open_repo(repo_dir)
-        #try:
+        # try:
         repo.heads['master'].checkout()
         repo.remotes['origin'].fetch(refspec='{}'.format('master'))
         repo.head.reset(commit=repo.refs['origin/master'], index=True, working_tree=True)
         #
-        #repo.create_head(branch_name, 'master').checkout()
-
+        # repo.create_head(branch_name, 'master').checkout()
 
     def test_discard_changes(self):
         repos_dir = r"C:\Users\BryzzhinIS\Documents\Хранилища\sync_script"
@@ -334,7 +336,7 @@ class GitNewDatabaseTest(unittest.TestCase):
         repo = clone_or_open_repo(repo_dir)
         repo.head.reset(commit='HEAD', index=True, working_tree=True)
         # repo.git.clean('-xdf')
-        #try:
-        #repo.index.checkout([filename]. force=True)
+        # try:
+        # repo.index.checkout([filename]. force=True)
         #
-        #repo.create_head(branch_name, 'master').checkout()
+        # repo.create_head(branch_name, 'master').checkout()
