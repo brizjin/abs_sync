@@ -1,3 +1,4 @@
+# coding=utf-8
 import datetime
 import re
 import time
@@ -306,7 +307,9 @@ class GitNewDatabaseTest(unittest.TestCase):
             m = re.match(r"(?P<user>.+)/(?P<pass>.+)@(?P<dbname>.+)", connection_string)
             db_name = m.group('dbname')
             log.log_init(db_name)
-            schedule.every(5).seconds.do(git_funcs.update, connection_string)
+            # schedule.every(5).seconds.do(git_funcs.update, connection_string)
+            schedule.every(1).hours.do(git_funcs.update, connection_string)
+            git_funcs.update(connection_string)
 
         do_schedule("ibs/HtuRhtl@day")
         do_schedule("ibs/HtuRhtl@mideveryday")

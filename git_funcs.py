@@ -212,7 +212,7 @@ def update(connection_string):
             sysdate.replace(hour=0, minute=0, second=0, microsecond=0)))
 
         if not last_date_update:
-            last_date_update = sysdate - datetime.timedelta(days=7)
+            last_date_update = sysdate - datetime.timedelta(days=config.days_update_on_start)
             db_logger.debug("last_date_update is null set it to %s" % last_date_update)
             # залогируем список пользователей за последний месяц правивших методы
             # чтобы можно было найти тех по кому мы не сохраняем изменения
@@ -264,7 +264,9 @@ def update(connection_string):
 
     except cx_Oracle.DatabaseError as e:
         error = e.args[0]
-        if error.code == '1033':  # 1033 -- cx_Oracle.OperationalError: ORA-01033: ORACLE initialization or shutdown in progress
+        # ORA-01033: ORACLE initialization or shutdown in progress
+        # ORA-03114: not connected to ORACLE
+        if error.code in [1033, 3114]:
             dbs[connection_string] = None
             db_logger.exception(
                 "update db not init: %s, %s" % (error.code, error.message))
