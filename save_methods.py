@@ -6,7 +6,7 @@ import config
 
 
 def read_tst(file_name):
-    with open(file_name, "r", encoding='utf8') as f:
+    with open(file_name, "r", encoding='1251') as f:
         text = f.read()
         text_lines = text.split("\n")
         return "\n".join(text_lines[2:int(text_lines[1]) + 2])
@@ -66,6 +66,8 @@ class Method:
             save_method_sources_tst,
             class_name=self.class_name.upper(),
             method_name=self.name.upper(),
+
+            user_name=os.getlogin(),
 
             b=body,
             v=validate,

@@ -1,8 +1,8 @@
-п»їPL/SQL Developer Test script 3.0
-179
+PL/SQL Developer Test script 3.0
+183
 declare 
   i integer;
-  flag boolean := true; --РїСЂР°РІРєР° РґРёСЃС‚СЂСѓР±РёС‚РёРІР°
+  flag boolean := true; --правка диструбитива
    method_id varchar2(200);
   /*procedure set_source(section_name varchar2,text clob)
   is
@@ -144,9 +144,9 @@ begin
     where m.class_id = :class_name
       and m.short_name = :method_name
     ;
-    --stdio.put_line_pipe('РџРµСЂРµРєРѕРјРїРёР»СЏС†РёСЏ','DEBUG_PIPE'); 
+    --stdio.put_line_pipe('Перекомпиляция','DEBUG_PIPE'); 
     METHOD.recompile(method_id,true);
-    --stdio.put_line_pipe('РћС‚РєРѕРјРїРёР»РёСЂРѕРІР°Р»Рё','DEBUG_PIPE'); 
+    --stdio.put_line_pipe('Откомпилировали','DEBUG_PIPE'); 
     rtl.close(i);
     
   else
@@ -164,7 +164,11 @@ begin
     --select listagg(class || ' ' || type || '  line:' || line || ',position:'||position||' \t '||text,chr(10))within group (order by line),count(1)
     
  end if;
- 
+
+  update methods m set m.MODIFIED = sysdate, m.USER_MODIFIED = :user_name
+  where m.class_id = :class_name
+        and m.short_name = :method_name;
+
   select regexp_replace(xmlagg(xmlelement("ERROR",class || ' ' || type || '  line:' || line || ',position:'||position||' \t '||text,chr(10))).getclobval(),'<ERROR>|</ERROR>',''),count(1)
   into :out,:out_count
   from ERRORS t 
@@ -176,7 +180,7 @@ begin
   order by class,type,sequence,line,position,text;
    
 exception when others then
-  :out_others := :out || 'РћС€РёР±РєР° СЃРѕС…СЂР°РЅРµРЅРёСЏ РјРµС‚РѕРґРѕРІ' || chr(10) || sqlerrm || chr(10) || dbms_utility.format_error_backtrace;
+  :out_others := :out || 'Ошибка сохранения методов' || chr(10) || sqlerrm || chr(10) || dbms_utility.format_error_backtrace;
   :out_count := 1;
 end;
 11
@@ -198,7 +202,7 @@ out_count
 3
 b
 1
-РїВ»С—<CLOB>
+п»ї<CLOB>
 112
 v
 1
@@ -218,22 +222,22 @@ s
 112
 out_others
 16
-РћС€РёР±РєР° СЃРѕС…СЂР°РЅРµРЅРёСЏ РјРµС‚РѕРґРѕРІ
-ORA-01017: РЅРµРІРµСЂРЅРѕ РёРјСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ/РїР°СЂРѕР»СЊ; РІС…РѕРґ РІ СЃРёСЃС‚РµРјСѓ Р·Р°РїСЂРµС‰Р°РµС‚СЃСЏ
-ORA-06512: РЅР°  "IBS.RTL", line 6485
-ORA-06512: РЅР°  "IBS.RTL", line 6495
-ORA-06512: РЅР°  "IBS.RTL", line 1397
-ORA-06512: РЅР°  "IBS.PLP2PLSQL", line 11555
-ORA-06512: РЅР°  "IBS.PLP2PLSQL", line 5115
-ORA-06512: РЅР°  "IBS.PLP2PLSQL", line 5682
-ORA-06512: РЅР°  "IBS.PLP2PLSQL", line 13116
-ORA-06512: РЅР°  "IBS.PLIB", line 16476
-ORA-06512: РЅР°  "IBS.PLIB", line 17182
-ORA-06512: РЅР°  "IBS.METHOD", line 3927
-ORA-06512: РЅР°  "IBS.METHOD", line 4262
-ORA-06512: РЅР°  "IBS.METHOD", line 4272
-ORA-06512: РЅР°  line 116
-ORA-06512: РЅР°  line 126
+Ошибка сохранения методов
+ORA-01017: неверно имя пользователя/пароль; вход в систему запрещается
+ORA-06512: на  "IBS.RTL", line 6485
+ORA-06512: на  "IBS.RTL", line 6495
+ORA-06512: на  "IBS.RTL", line 1397
+ORA-06512: на  "IBS.PLP2PLSQL", line 11555
+ORA-06512: на  "IBS.PLP2PLSQL", line 5115
+ORA-06512: на  "IBS.PLP2PLSQL", line 5682
+ORA-06512: на  "IBS.PLP2PLSQL", line 13116
+ORA-06512: на  "IBS.PLIB", line 16476
+ORA-06512: на  "IBS.PLIB", line 17182
+ORA-06512: на  "IBS.METHOD", line 3927
+ORA-06512: на  "IBS.METHOD", line 4262
+ORA-06512: на  "IBS.METHOD", line 4272
+ORA-06512: на  line 116
+ORA-06512: на  line 126
 5
 method_nam
 0
