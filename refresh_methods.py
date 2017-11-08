@@ -51,7 +51,7 @@ def write_method_text(props):
     write_part(props["s"], file_name + ".script.sql")
 
 
-method_sources_tst = read_tst(os.path.join(sync_script_dir, "method_sources.tst"))
+method_sources_tst = read_tst(os.path.join(sync_script_dir, "sql", "method_sources.tst"))
 
 
 def update_method(cnn, class_name, method_name):

@@ -62,7 +62,8 @@ def commit(repo, msg, author_name, author_mail, commiter_name, commiter_mail):
 
 def tune_branch_name(cnn):
     date_updated = select_tune_date_update(cnn)
-    return '%s_%s' % (cnn.dsn, date_updated.strftime('%d.%m.%Y_%H.%M'))
+    # return '%s_%s' % (cnn.dsn, date_updated.strftime('%d.%m.%Y_%H.%M'))
+    return '%s_%s' % (cnn.dsn, date_updated.strftime('%Y.%m.%d_%H.%M'))
 
 
 def commit_group(repo, group, db_name, days_delta):
@@ -80,6 +81,7 @@ def commit_group(repo, group, db_name, days_delta):
         committer = Actor('sources_sync_job', '@mail')
         db_logger.debug("dfg.iloc[0]['MODIFIED']=%s, days_delta=%s" % (dfg.iloc[0]["MODIFIED"], days_delta))
         date_str = (dfg.iloc[0]["MODIFIED"] + datetime.timedelta(hours=-3) + days_delta).strftime('%d.%m.%YT%H:%M:%S')
+
         repo.index.commit(msg, author=author, committer=committer, author_date=date_str)
 
 
@@ -229,7 +231,7 @@ def update(connection_string):
             df = select_all_by_date_modified(cnn, last_date_update.strftime('%d.%m.%Y %H:%M:%S'))
         if len(df) > 0:
 
-            branch_name = git_funcs.tune_branch_name(cnn)
+            branch_name = tune_branch_name(cnn)
             if branch_name in repo.branches:
                 # repo.heads[branch_name].checkout()
                 try:
@@ -241,6 +243,9 @@ def update(connection_string):
             else:
                 try:
                     repo.heads['master'].checkout()
+
+                    # with repo.remotes['origin'].config_writer as cw:
+                    #     cw.set("push", "refs/heads/*:refs/heads/qa/*")
                     repo.remotes['origin'].fetch(refspec='{}'.format('master'))
                     repo.head.reset(commit=repo.refs['origin/master'], index=True, working_tree=True)
                 except Exception:
@@ -256,11 +261,13 @@ def update(connection_string):
             #     pass
 
             git_funcs.commit_by_dataframe(repo, df, db_name, days_delta)
+            # repo.remotes['origin'].push(refspec='{}:refs/heads/autosave/{}'.format(branch_name, branch_name))
             repo.remotes['origin'].push(refspec='{}:{}'.format(branch_name, branch_name))
         else:
             db_logger.debug("up-to-date")
 
         last_dates_update[db_name] = sysdate
+        db_logger.info("updated finish")
 
     except cx_Oracle.DatabaseError as e:
         error = e.args[0]

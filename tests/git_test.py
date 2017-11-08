@@ -302,6 +302,7 @@ class GitNewDatabaseTest(unittest.TestCase):
             # repo.head.reset(commit=repo.refs[remote_branch], index=True, working_tree=True)
 
     def test_job(self):
+        # os.environ["GIT_NAMESPACE"] = "autosave"
         def do_schedule(connection_string):
             # cnn_object = cx_Oracle.connect(connection_string)
             m = re.match(r"(?P<user>.+)/(?P<pass>.+)@(?P<dbname>.+)", connection_string)
