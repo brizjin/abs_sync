@@ -81,6 +81,7 @@ class Method:
         )
         err_num = int(err_num.getvalue())
         print(err_num)
+        print(err_clob.getvalue())
 
         if out_others.getvalue():
             print(out_others.getvalue().read(), '1251')
