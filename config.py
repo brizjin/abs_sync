@@ -1,3 +1,4 @@
+# coding=utf-8
 import os
 
 import pandas as pd
@@ -130,5 +131,11 @@ pd.options.display.width = 300
 pd.options.display.max_rows = None
 
 dbs = {
-    'ass': "ibs/HtuRhtl@lw-ass-abs"
+    'ass': "ibs/HtuRhtl@lw-ass-abs",
+    'abs': "ibs/HtuRhtl@lw-abs-abs",
+    'p2': "ibs/HtuRhtl@lw-p2-abs",
+    'msb': "ibs/HtuRhtl@msb",
+    'mid': "ibs/HtuRhtl@midabs",
+    'day': "ibs/HtuRhtl@day",
+    'midday': "ibs/HtuRhtl@MIDEVERYDAY",
 }
