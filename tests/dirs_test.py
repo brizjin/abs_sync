@@ -150,3 +150,7 @@ class DirsTest(unittest.TestCase):
         project_folder_path = os.path.join(config.git_folder, cnn.dsn)
         df = select_objects_in_folder_or_date_modified(cnn, project_folder_path, 1, 'd')
         dirs.write_object_from_df(df, project_folder_path)
+
+    def test_clear_folder(self):
+        # dirs.clear_folder(r"C:\Users\BryzzhinIS\Documents\Хранилища\test")
+        dirs.clear_folder(r"C:\Users\BryzzhinIS\Documents\Хранилища\pack_texts")

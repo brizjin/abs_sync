@@ -6,6 +6,7 @@ import pandas as pd
 git_url = "http://git.brc.local:3000/ivan.bryzzhin/abs.git"
 git_folder = r"C:\Users\BryzzhinIS\Documents\Хранилища\sync_script\dbs"
 texts_working_dir = r"C:\Users\BryzzhinIS\Documents\Хранилища\pack_texts"
+# prj_dir = "C:/Users/BryzzhinIS/Documents/Хранилища/pack_texts"
 os.environ["ORACLE_HOME"] = "C:/app/BryzzhinIS/product/11.2.0/client_1/"
 os.environ['NLS_LANG'] = '.AL32UTF8'
 # кол-во дней от текущей даты на базе

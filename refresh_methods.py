@@ -7,6 +7,7 @@ import sys
 import cx_Oracle
 from git import Repo
 
+import config
 import oracle_connection
 
 os.environ["ORACLE_HOME"] = "C:/app/BryzzhinIS/product/11.2.0/client_1/"
@@ -14,7 +15,7 @@ os.environ['NLS_LANG'] = '.AL32UTF8'
 
 # prj_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 sync_script_dir = os.path.dirname(os.path.realpath(__file__))
-prj_dir = "C:/Users/BryzzhinIS/Documents/Хранилища/pack_texts"
+
 
 
 # os.chdir(prj_dir)
@@ -43,7 +44,7 @@ def write_part(part, name):
 
 
 def write_method_text(props):
-    file_name = os.path.join(prj_dir, props["class_name"], props["method_name"])
+    file_name = os.path.join(config.texts_working_dir, props["class_name"], props["method_name"])
     write_part(props["e"], file_name + ".body.sql")
     write_part(props["v"], file_name + ".validate.sql")
     write_part(props["g"], file_name + ".globals.sql")
@@ -62,7 +63,7 @@ def update_method(cnn, class_name, method_name):
 
 
 def update_class(cnn, class_name):
-    brk_msg_dir = os.path.join(prj_dir, class_name)
+    brk_msg_dir = os.path.join(config.texts_working_dir, class_name)
     methods = set([f.split(".")[0] for f in os.listdir(brk_msg_dir) if os.path.isfile(os.path.join(brk_msg_dir, f))])
     for m in methods:
         update_method(cnn, class_name, m)
@@ -74,7 +75,7 @@ def update_creteria(cnn, class_name, creteria_name):
         from criteria cr
         where cr.class_id = :class_id
           and cr.short_name = :short_name""", **dict(class_id=class_name, short_name=creteria_name))
-    file_name = os.path.join(prj_dir, class_name, creteria_name)
+    file_name = os.path.join(config.texts_working_dir, class_name, creteria_name)
     write_part(s[0]["condition"] + s[0]["order_by"] + s[0]["group_by"], file_name + ".sql")
 
 
@@ -90,7 +91,7 @@ def update_trigger(cnn, trigger_name):
                   :trigger_body := 'CREATE OR REPLACE TRIGGER ' || d || c;
                 end;""", **dict(trigger_name=trigger_name, trigger_body=cx_Oracle.CLOB, table_name=cx_Oracle.NCHAR))
     class_name = r["table_name"].split('#')[1]
-    file_name = os.path.join(prj_dir, class_name, trigger_name)
+    file_name = os.path.join(config.texts_working_dir, class_name, trigger_name)
     write_part(r["trigger_body"], file_name + ".trg.sql")
 
 
@@ -125,9 +126,9 @@ def git_checkout(repo, branch_name):
 def git_commit(repo):
     # repo.git.add(update=True)
     repo.git.add(all=True)
-    # modified_files = [os.path.join(prj_dir, m.a_path) for m in repo.index.diff(None)]
-    staged_files = [os.path.join(prj_dir, s.a_path) for s in repo.index.diff("HEAD")]
-    # untrack_files = [os.path.join(prj_dir, u) for u in repo.untracked_files]
+    # modified_files = [os.path.join(config.texts_working_dir, m.a_path) for m in repo.index.diff(None)]
+    staged_files = [os.path.join(config.texts_working_dir, s.a_path) for s in repo.index.diff("HEAD")]
+    # untrack_files = [os.path.join(config.texts_working_dir, u) for u in repo.untracked_files]
     # s = sorted(modified_files + staged_files + untrack_files)
     s = sorted(staged_files)
     # print("Current branch: %s" % repo.active_branch.name)
@@ -165,14 +166,16 @@ def update_for_time(cnn, num, interval_name):
     #     update(cnn, row["type"], row["class_id"], row["short_name"], p)
 
 
-def update_from_dir_list(cnn, dir_path=prj_dir):
+def update_from_dir_list(cnn, dir_path=config.texts_working_dir):
     folders = [f for f in os.listdir(dir_path) if not os.path.isfile(os.path.join(dir_path, f))]
     folders = [f for f in folders if f not in ['.git', '.idea', '.sync', 'PLSQL', 'TESTS']]
     files = [(f, set([file.split(".")[0] for file in os.listdir(os.path.join(dir_path, f))
                       if os.path.isfile(os.path.join(dir_path, f, file))])) for f in folders]
+    files = [(folder, s) for folder, s in files if len(s) > 0]
     files_where = " or ".join(
         ["CLASS_ID = '%s' and SHORT_NAME in (%s)" % (folder[0], ','.join(["'%s'" % f for f in folder[1]])) for
          folder in files])
+    print(files_where)
 
     return cnn.select("""select CLASS_ID, SHORT_NAME, TYPE from (%s) where %s""" % (db_obj_sql_text, files_where))
 
@@ -214,7 +217,7 @@ def updater(db, t, p, u, o, b):
     repo = None
     prev_branch = None
     if b and not p:
-        repo = Repo(prj_dir)
+        repo = Repo(config.texts_working_dir)
         prev_branch = repo.active_branch.name
         if git_checkout(repo, db):
             print("Чтобы использовать флаг -b сначала закомментируйте изменения")
@@ -260,7 +263,7 @@ if __name__ == '__main__':
         prev_branch = None
         repo = None
         if not p:
-            repo = Repo(prj_dir)
+            repo = Repo(config.texts_working_dir)
             if git_staged_files(repo):
                 print("В рабочем каталоге имеются не зафиксированные изменения")
                 return
