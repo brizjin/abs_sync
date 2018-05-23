@@ -3,12 +3,17 @@ import os
 
 import pandas as pd
 
+project_root = os.path.dirname(os.path.realpath(__file__))
 git_url = "http://git.brc.local:3000/ivan.bryzzhin/abs.git"
 git_folder = r"C:\Users\BryzzhinIS\Documents\Хранилища\sync_script\dbs"
 texts_working_dir = r"C:\Users\BryzzhinIS\Documents\Хранилища\pack_texts"
 # prj_dir = "C:/Users/BryzzhinIS/Documents/Хранилища/pack_texts"
-os.environ["ORACLE_HOME"] = "C:/app/BryzzhinIS/product/11.2.0/client_1/"
+if "ORACLE_HOME" not in os.environ:
+    os.environ["ORACLE_HOME"] = "C:/app/BryzzhinIS/product/11.2.0/client_1/"
 os.environ['NLS_LANG'] = '.AL32UTF8'
+
+user_config_file_name = os.path.join(project_root, "config", "default.json")
+
 # кол-во дней от текущей даты на базе
 # которое учитывается чтобы обновить объект
 # например по событию компиляции
@@ -132,11 +137,18 @@ pd.options.display.width = 300
 pd.options.display.max_rows = None
 
 dbs = {
-    'ass': "ibs/HtuRhtl@lw-ass-abs",
-    'abs': "ibs/HtuRhtl@lw-abs-abs",
-    'p2': "ibs/HtuRhtl@lw-p2-abs",
-    'msb': "ibs/HtuRhtl@msb",
-    'mid': "ibs/HtuRhtl@midabs",
-    'day': "ibs/HtuRhtl@day",
-    'midday': "ibs/HtuRhtl@MIDEVERYDAY",
+    # 'ass': "ibs/HtuRhtl@lw-ass-abs",
+    # 'abs': "ibs/HtuRhtl@lw-abs-abs",
+    # 'p2': "ibs/HtuRhtl@lw-p2-abs",
+    # 'msb': "ibs/HtuRhtl@msb",
+    # 'mid': "ibs/HtuRhtl@midabs",
+    # 'midday': "ibs/HtuRhtl@MIDEVERYDAY",
+    'ass': "ibs/HtuRhtl@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = lw-ass-abs.brc.local)(PORT = 1521)))(CONNECT_DATA =(SID = assabs)))",
+    'abs': "ibs/HtuRhtl@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = lw-abs-abs.brc.local)(PORT = 1521)))(CONNECT_DATA =(SID = lwabsabs)))",
+    'p2':  "ibs/HtuRhtl@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = lw-p2-abs.brc.local)(PORT = 1521)))(CONNECT_DATA =(SID = lwp2abs)))",
+    'msb': "ibs/HtuRhtl@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = lw-abs-abs-msb.brc.local)(PORT = 1521)))(CONNECT_DATA =(SID = msb)))",
+    'mid': "ibs/HtuRhtl@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = mid-abs.brc.local)(PORT = 1521)))(CONNECT_DATA =(SID = midabs)))",
+    'midday': "ibs/HtuRhtl@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = 172.21.13.152)(PORT = 1521)))(CONNECT_DATA =(SID = Midabsev)))",
+    'day': "ibs/HtuRhtl@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = lw-abs-abs-everyday)(PORT = 1521)))(CONNECT_DATA =(SID = lwabsev)))",
 }
+

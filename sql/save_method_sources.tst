@@ -132,11 +132,11 @@ begin
   if flag then
   --    set_source2();
     i := rtl.open;      
-    set_source2(:class_name,:method_name,'EXECUTE' ,:b);
-    set_source2(:class_name,:method_name,'VALIDATE',:v);
-    set_source2(:class_name,:method_name,'PUBLIC'  ,:g);
-    set_source2(:class_name,:method_name,'PRIVATE' ,:l);    
-    set_source2(:class_name,:method_name,'VBSCRIPT',:s);
+    set_source2(:class_name,:method_name,'EXECUTE' ,:body);
+    set_source2(:class_name,:method_name,'VALIDATE',:validate);
+    set_source2(:class_name,:method_name,'PUBLIC'  ,:globals);
+    set_source2(:class_name,:method_name,'PRIVATE' ,:locals);
+    set_source2(:class_name,:method_name,'VBSCRIPT',:script);
     
     select id
     into method_id
@@ -153,11 +153,11 @@ begin
     :out_count := 0;
     Z$RUNTIME_PLP_TOOLS.reset;
     Z$RUNTIME_PLP_TOOLS.Open_Method(:class_name,:method_name);
-    set_source('B',:b);--'EXECUTE'
-    set_source('V',:v);--'VALIDATE'
-    set_source('G',:g);--'PUBLIC'
-    set_source('L',:l);--'PRIVATE'
-    set_source('S',:s);--'VBSCRIPT'
+    set_source('B',:body);--'EXECUTE'
+    set_source('V',:validate);--'VALIDATE'
+    set_source('G',:globals);--'PUBLIC'
+    set_source('L',:locals);--'PRIVATE'
+    set_source('S',:script);--'VBSCRIPT'
     Z$RUNTIME_PLP_TOOLS.Update_Method_Src;
     Z$RUNTIME_PLP_TOOLS.reset;
     

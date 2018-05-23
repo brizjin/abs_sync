@@ -8,7 +8,7 @@ from abs2 import cli
 def call_cli(params=list()):
     print("###begin with params", params)
     runner = CliRunner()
-    result = runner.invoke(cli, params, obj={})
+    result = runner.invoke(cli, params, obj={}, catch_exceptions=False)
     print(result.output)
     print("###end")
 
@@ -30,7 +30,14 @@ class CliTest(unittest.TestCase):
         call_cli(['pull', 'time', '--help'])
 
     def test_push_p1(self):
-        call_cli(['pull', '--time','1d'])
+        call_cli(['pull', '--time', '1d'])
 
     def test_push_all(self):
-        call_cli(['day', 'pull', 'all'])
+        call_cli(['midday', 'pull', 'all'])
+
+    def test_pull2(self):
+        call_cli(['pull', '-p', 'time', '-d', '1'])
+
+
+    def test_pull3(self):
+        call_cli(['pull', 'time'])

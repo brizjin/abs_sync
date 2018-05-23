@@ -1,7 +1,13 @@
+import cx_Oracle
+import json
 import os
+import pandas as pd
 import shutil
-
+from pathlib import Path
 import click
+from cx_Oracle import Connection
+
+from numpy import nan
 
 import config
 import dirs
@@ -10,20 +16,138 @@ import save_methods
 from refresh_methods import update_for_time, update, update_from_dir_list
 
 
+class Db:
+    def __init__(self, connection_string):
+        self.connection_string = connection_string
+        self.username = str(connection_string[:connection_string.find('/')])
+        self.password = str(connection_string[connection_string.find('/') + 1:connection_string.find('@')])
+        self.dsn = str(connection_string[connection_string.find('@') + 1:])
+        self.cnn = Connection(user=self.username, password=self.password, dsn=self.dsn)
+
+    def __str__(self):
+        return "%s.%s[%s]" % (self.__module__, self.__class__.__name__, self.connection_string)
+
+    def select(self, sql_text, **kwargs):
+        cursor = self.cnn.cursor()
+        try:
+            cursor.execute(sql_text, **kwargs)
+            desc = [d[0] for d in cursor.description]
+            df = pd.DataFrame(cursor.fetchall(), columns=desc)
+            # df = df.fillna(value=nan)
+            df = df.fillna('')
+            return df
+        finally:
+            cursor.close()
+
+    def execute_plsql(self, pl_sql_text, **kwargs):
+        cursor_vars = {}
+
+        cursor = self.cnn.cursor()
+        try:
+            for k, v in kwargs.items():
+                if v in (cx_Oracle.CLOB, cx_Oracle.BLOB, cx_Oracle.NCHAR, cx_Oracle.NUMBER):
+                    cursor_vars[k] = cursor.var(v)
+                else:
+                    cursor_vars[k] = v
+
+            cursor.execute(pl_sql_text, **cursor_vars)
+
+            for k, v in kwargs.items():
+                if v in (cx_Oracle.CLOB, cx_Oracle.BLOB, cx_Oracle.NCHAR, cx_Oracle.NUMBER):
+                    value = cursor_vars[k].getvalue()
+                    if value and v in (cx_Oracle.CLOB, cx_Oracle.BLOB):
+                        value = value.read()
+                    cursor_vars[k] = value
+            return cursor_vars
+        finally:
+            cursor.close()
+
+    def select_sid(self):
+        return self.select("select sys_context('userenv','instance_name') sid from dual")["SID"][0]
+
+
 @click.group()
-@click.option('--test', is_flag=True, help="Тестирование. Ни изменяет данные, только вывод на экран")
-@click.argument('db')
+# @click.option('--test', is_flag=True, help="Тестирование. Ни изменяет данные, только вывод на экран")
+# @click.argument('db')
 @click.pass_context
-def cli(ctx, db, test):
+def cli(ctx):
+    """Скрипт для автоматизации работы с исходниками
+
+    \b
+    Примеры использования:
+    abs2 pull p2
+    """
+
     pass
-    ctx.obj['test'] = test
-    ctx.obj['db'] = db
+    # ctx.obj['test'] = test
+    # ctx.obj['db'] = db
     # return ctx
 
 
 @cli.group()
 def push():
+    """Отправить операции"""
     click.echo('Initialized the database')
+
+
+@cli.group()
+def env():
+    """Параметры выполнения комманд"""
+
+
+def default_parameters():
+    return dict(db_user_name='ibs', db='p2', project_directory=config.texts_working_dir,
+                oracle_home=os.environ["ORACLE_HOME"])
+
+
+def write_parameters(cfg):
+    if not os.path.exists(os.path.dirname(config.user_config_file_name)):
+        os.makedirs(os.path.dirname(config.user_config_file_name))
+    with open(config.user_config_file_name, 'w+') as f:
+        f.write(json.dumps(cfg))
+
+
+def read_parameters():
+    if os.path.isfile(config.user_config_file_name):
+        with open(config.user_config_file_name, 'r') as f:
+            cfg = json.load(f)
+
+    else:
+        cfg = default_parameters()
+        write_parameters(cfg)
+    return cfg
+
+
+def print_cfg(cfg):
+    ml = len(max(cfg.keys(), key=len))
+
+    for k, v in sorted(cfg.items()):
+        click.echo("%-{0}s = %s".format(ml) % (k.upper(), v))
+
+
+@env.command(name='print')
+def env_print():
+    """Вывести на экран текущие настройки"""
+    print_cfg(read_parameters())
+
+
+@env.command(name='set')
+@click.argument('params', nargs=-1)
+def env_set(params):
+    """Установить параметры"""
+    cfg = read_parameters()
+    for p in params:
+        key, value = p.split('=')
+        cfg[key] = value
+    write_parameters(cfg)
+    print_cfg(read_parameters())
+
+
+@env.command(name='reset')
+def env_reset():
+    """Сбросить параметры значениями по-умолчанию"""
+    write_parameters(default_parameters())
+    print_cfg(read_parameters())
 
 
 # @cli.command()
@@ -39,83 +163,75 @@ def push():
 #     click.echo(click.style('Hello World!', fg='green'))
 #     click.echo('Initialized the database %s,%s' % (mode, params))
 
+
 @cli.group()
-def pull():
-    # return ctx
+# @click.argument('db')
+# @click.option('-p', is_flag=True, help="Только вывести список операций которые будут загуржены")
+@click.pass_context
+def pull(ctx):
+    """Получить последнии изменения"""
     pass
 
 
 def print_objects(objs):
-    for row in objs:
-        click.echo(click.style("%s ::[%s].[%s]" % (row["type"], row["class_id"], row["short_name"]), fg='green'))
+    click.echo(click.style("Список сохраненных операций:", fg='green'))
+    click.echo(click.style(str(objs.sort_values(['CLASS_ID', 'SHORT_NAME']))))
 
 
 def update_objects(cnn, ctx, objs):
-    for row in objs:
-        # click.echo(click.style("1. %s ::[%s].[%s]" % (row["type"], row["class_id"], row["short_name"]), fg='green'))
-        is_test = ctx.obj['test']
-        if is_test is None or is_test is False:
-            # click.echo(click.style("2. %s ::[%s].[%s]" % (row["type"], row["class_id"], row["short_name"]), fg='green'))
-            update(cnn, row["type"], row["class_id"], row["short_name"])
+    for i, row in objs.iterrows():
+        update(cnn, row["TYPE"], row["CLASS_ID"], row["SHORT_NAME"])
 
 
 @pull.command(name="all")
+@click.option('--db', help="База данных для подключения")
 @click.pass_context
-def pull_all(ctx):
-    click.echo("pull all")
-    cnn_str = config.dbs[ctx.obj['db']]
-    cnn = oracle_connection.Db().connect(cnn_str)
-    objs = []
-    objs = update_from_dir_list(cnn)
+def pull_all(ctx, db):
+    """Получает все изменения по всем операциям/вьюхам/тригирам, что лежат в гите"""
+    cfg = read_parameters()
+    db = db if db else cfg['db']
+    cnn = Db(config.dbs[db])
 
-    def clear_folder(folder):
-        for the_file in os.listdir(folder):
-            if the_file[0] == '.':
-                continue
+    save_methods.CftSchema.remove_unknown_files_on_disk()
+    disk_schema = save_methods.CftSchema.read_disk_schema()
+    db_schema = save_methods.CftSchema.read_db_schema(cnn, disk_schema.elements)
 
-            file_path = os.path.join(folder, the_file)
+    df1 = disk_schema.as_df()
+    df2 = db_schema.as_df()
+    df4 = pd.merge(df1, df2, indicator=True, how='outer').query('_merge=="left_only"').drop('_merge', axis=1)
+    for m in save_methods.CftSchema(df4).as_cls():
+        m.remove_from_disk()
 
-            if the_file in ['requirements.txt']:
-                continue
-            if the_file in ['PLSQL', 'TESTS', 'PACKAGES'] and os.path.isdir(file_path):
-                continue
-
-            try:
-                if os.path.isfile(file_path):
-                    os.unlink(file_path)
-                elif os.path.isdir(file_path):
-                    shutil.rmtree(file_path)
-            except Exception as e:
-                print(e)
-
-    clear_folder(config.texts_working_dir)
-    update_objects(cnn, ctx, objs)
-    print_objects(objs)
+    db_schema.write_to_disk_from_db(cnn)
+    click.echo(str(df2.sort_values(['CLASS', 'NAME'])))
 
 
-@pull.command(name="time", short_help="Получить последние изменения исходников за время")
-@click.option('-m', 'unit', flag_value='m', default=False, help="Минуты")
+@pull.command(name="time", short_help="Получить последние изменения исходников за время", epilog="Пока!")
+@click.option('-m', 'unit', flag_value='m', default=True, help="Минуты")
 @click.option('-h', 'unit', flag_value='h', default=False, help="Часы")
 @click.option('-d', 'unit', flag_value='d', default=False, help="Дни")
 @click.argument('count', required=False)  # , metavar="КОЛ-ВО"
+@click.option('--db', help="База данных для подключения")
 @click.pass_context
-def pull_time(ctx, count, unit):
+def pull_time(ctx, count, unit, db):
     """Получить последние изменения исходников за время."""
 
-    if unit is None:
-        click.echo(click.style('Необходимо указать единицу измерения времени', fg='red'))
-        click.echo(click.style('Пример вызова: pull time -d 1', fg='yellow'))
-    # if count is None:
-    #     ctx.invoke(pull_time, "--help")
+    cfg = read_parameters()
+    db = db if db else cfg['db']
+    cnn = Db(config.dbs[db])
 
-    click.echo("pull time %s,%s context=%s" % (count, unit, ctx.obj))
-    cnn_str = config.dbs[ctx.obj['db']]
-    cnn = oracle_connection.Db().connect(cnn_str)
+    click.echo('Подключаемся к базе %s' % cnn.select_sid())
 
-    objs = update_for_time(cnn, count, unit)
-    update_objects(cnn, ctx, objs)
-    print_objects(objs)
-    # return ctx
+    if count is None:
+        # click.echo(click.style('Необходимо указать единицу измерения времени', fg='red'))
+        click.echo(click.style('Необходимо указать кол-во времени', fg='yellow'))
+        click.echo(click.style('Пример вызова: pull time -d 2', fg='yellow'))
+        click.echo(ctx.get_help())
+        return
+
+    db_schema = save_methods.CftSchema.read_db_schema_by_time(cnn, count, unit)
+    print(db_schema.as_df())
+    db_schema.write_to_disk_from_db(cnn)
 
 
 @pull.command(name="list")

@@ -47,11 +47,11 @@ declare
 begin
   class_name := :class_name;
   method_name := :method_name;
-  :e := get_part(class_name,method_name,'EXECUTE');
-  :v := get_part(class_name,method_name,'VALIDATE');
-  :g := get_part(class_name,method_name,'PUBLIC');
-  :l := get_part(class_name,method_name,'PRIVATE');
-  :s := get_part(class_name,method_name,'VBSCRIPT');
+  :body := get_part(class_name,method_name,'EXECUTE');
+  :validate := get_part(class_name,method_name,'VALIDATE');
+  :globals := get_part(class_name,method_name,'PUBLIC');
+  :locals := get_part(class_name,method_name,'PRIVATE');
+  :script := get_part(class_name,method_name,'VBSCRIPT');
 
 end;
 9

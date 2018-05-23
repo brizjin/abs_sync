@@ -75,8 +75,12 @@ def update_creteria(cnn, class_name, creteria_name):
         from criteria cr
         where cr.class_id = :class_id
           and cr.short_name = :short_name""", **dict(class_id=class_name, short_name=creteria_name))
+    # print(s)
+    # print(s["CONDITION"][0])
+    # print(s["ORDER_BY"][0])
+    # print(s["GROUP_BY"][0])
     file_name = os.path.join(config.texts_working_dir, class_name, creteria_name)
-    write_part(s[0]["condition"] + s[0]["order_by"] + s[0]["group_by"], file_name + ".sql")
+    write_part(s["CONDITION"][0] + s["ORDER_BY"][0] + s["GROUP_BY"][0], file_name + ".sql")
 
 
 def update_trigger(cnn, trigger_name):
@@ -175,7 +179,6 @@ def update_from_dir_list(cnn, dir_path=config.texts_working_dir):
     files_where = " or ".join(
         ["CLASS_ID = '%s' and SHORT_NAME in (%s)" % (folder[0], ','.join(["'%s'" % f for f in folder[1]])) for
          folder in files])
-    print(files_where)
 
     return cnn.select("""select CLASS_ID, SHORT_NAME, TYPE from (%s) where %s""" % (db_obj_sql_text, files_where))
 
