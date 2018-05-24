@@ -1,6 +1,6 @@
 import unittest
 
-import log
+from abs_sync import log
 
 
 class LogTest(unittest.TestCase):

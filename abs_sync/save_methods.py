@@ -6,7 +6,7 @@ from pathlib import Path
 import cx_Oracle
 import pandas as pd
 
-import config
+from abs_sync import config
 
 
 def read_tst(file_name):

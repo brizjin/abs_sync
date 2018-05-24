@@ -5,9 +5,9 @@ import unittest
 import cx_Oracle as cx_Oracle
 import pandas as pd
 
-import config
+from abs_sync import config
 import dirs
-from selects import select_types_in_folder_or_date_modified, select_objects_in_folder_or_date_modified
+from abs_sync.selects import select_types_in_folder_or_date_modified, select_objects_in_folder_or_date_modified
 
 pd.options.display.width = 300
 

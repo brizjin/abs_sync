@@ -9,11 +9,10 @@ import cx_Oracle
 import pandas as pd
 import schedule
 
-import config
-import git_funcs
-import log
-import save_methods
-from refresh_methods import update
+from abs_sync import config, save_methods, git_funcs, log
+
+
+# from refresh_methods import update
 
 
 class Db:
@@ -211,9 +210,9 @@ def print_objects(objs):
     click.echo(click.style(str(objs.sort_values(['CLASS_ID', 'SHORT_NAME']))))
 
 
-def update_objects(cnn, ctx, objs):
-    for i, row in objs.iterrows():
-        update(cnn, row["TYPE"], row["CLASS_ID"], row["SHORT_NAME"])
+# def update_objects(cnn, ctx, objs):
+#     for i, row in objs.iterrows():
+#         update(cnn, row["TYPE"], row["CLASS_ID"], row["SHORT_NAME"])
 
 
 @pull.command(name="all")

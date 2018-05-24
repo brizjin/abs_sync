@@ -2,7 +2,7 @@ import unittest
 
 from click.testing import CliRunner
 
-from abs2 import cli
+from abs_sync.scripts.abs2 import cli
 
 
 def call_cli(params=list()):

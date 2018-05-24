@@ -7,7 +7,7 @@ import sys
 import cx_Oracle
 from git import Repo
 
-import config
+from abs_sync import config
 import oracle_connection
 
 os.environ["ORACLE_HOME"] = "C:/app/BryzzhinIS/product/11.2.0/client_1/"

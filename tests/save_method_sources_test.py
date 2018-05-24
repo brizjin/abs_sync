@@ -4,9 +4,8 @@ import os
 
 import pandas as pd
 
-import config
-import save_methods
-from abs2 import Db
+from abs_sync import config, save_methods
+from abs_sync.scripts.abs2 import Db
 
 
 class SaveMethodTest(unittest.TestCase):

@@ -4,15 +4,13 @@ import re
 import time
 import unittest
 
-import cx_Oracle
 import schedule
 from git import Actor
 
-import git_funcs
-import log
+from abs_sync import git_funcs, log
 from dirs import write_object_from_row
-from git_funcs import clone_or_open_repo
-from selects import *
+from abs_sync.git_funcs import clone_or_open_repo
+from abs_sync.selects import *
 
 git_url = "http://git.brc.local:3000/ivan.bryzzhin/abs.git"
 os.environ["ORACLE_HOME"] = "C:/app/BryzzhinIS/product/11.2.0/client_1/"

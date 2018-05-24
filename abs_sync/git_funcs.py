@@ -1,11 +1,9 @@
 import datetime
 import re
 
-import cx_Oracle
 from git import Repo, Actor
 
-import git_funcs
-from selects import *
+from abs_sync.selects import *
 
 logger = logging.getLogger('root')
 

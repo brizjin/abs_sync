@@ -5,9 +5,7 @@ import re
 import cx_Oracle
 from git import Repo
 
-import config
-import dirs
-from selects import create_tune_date_update, select_objects_in_folder_or_date_modified
+from abs_sync.selects import create_tune_date_update
 
 connection_string = "ibs/HtuRhtl@day"
 

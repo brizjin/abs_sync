@@ -1,10 +1,9 @@
 import unittest
 
-import cx_Oracle
 import datetime
 
-import log
-from selects import *
+from abs_sync import log
+from abs_sync.selects import *
 
 os.environ["ORACLE_HOME"] = "C:/app/BryzzhinIS/product/11.2.0/client_1/"
 os.environ['NLS_LANG'] = '.AL32UTF8'

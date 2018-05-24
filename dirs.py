@@ -1,10 +1,9 @@
 import os
 import re
-import shutil
 
 import pandas as pd
 
-import log
+from abs_sync import log
 
 logger = log.log_init("root")
 

@@ -5,7 +5,7 @@ import traceback
 import cx_Oracle
 import pandas as pd
 
-import config
+from abs_sync import config
 import dirs
 from strings import nstr
 

@@ -1,9 +1,8 @@
 import re
 import sys
 
-import config
+from abs_sync import config, save_methods
 import oracle_connection
-import save_methods
 from refresh_methods import update_from_dir_list, update_for_time, update_from_list, update
 
 
