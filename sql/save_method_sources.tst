@@ -180,7 +180,7 @@ begin
   order by class,type,sequence,line,position,text;
    
 exception when others then
-  :out_others := :out || 'Ошибка сохранения методов' || chr(10) || sqlerrm || chr(10) || dbms_utility.format_error_backtrace;
+  :out_others := 'Ошибка сохранения методов' || chr(10) || sqlerrm || chr(10) || dbms_utility.format_error_backtrace;
   :out_count := 1;
 end;
 11

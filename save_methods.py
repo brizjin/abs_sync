@@ -117,13 +117,13 @@ class Method(CftElement):
         cursor = db.cnn.cursor()
         # cursor_vars = ['b', 'v', 'g', 'l', 's'] # **dict((key, cx_Oracle.CLOB) for key in cursor_vars)
         cursor.setinputsizes(
-            b=cx_Oracle.CLOB,
-            v=cx_Oracle.CLOB,
-            g=cx_Oracle.CLOB,
-            l=cx_Oracle.CLOB,
-            s=cx_Oracle.CLOB
+            body=cx_Oracle.CLOB,
+            validate=cx_Oracle.CLOB,
+            globals=cx_Oracle.CLOB,
+            locals=cx_Oracle.CLOB,
+            script=cx_Oracle.CLOB
         )
-        err_clob, out_others, err_num = cursor.var(cx_Oracle.CLOB), cursor.var(cx_Oracle.CLOB), cursor.var(
+        err_clob, out_others, err_num = cursor.var(cx_Oracle.CLOB), cursor.var(cx_Oracle.STRING), cursor.var(
             cx_Oracle.NUMBER)
 
         cursor.execute(
@@ -133,11 +133,11 @@ class Method(CftElement):
 
             user_name=os.getlogin(),
 
-            b=self.texts['body'],
-            v=self.texts['validate'],
-            g=self.texts['globals'],
-            l=self.texts['locals'],
-            s=self.texts['script'],
+            body=self.texts.get('body'),
+            validate=self.texts.get('validate'),
+            globals=self.texts.get('globals'),
+            locals=self.texts.get('locals'),
+            script=self.texts.get('script'),
 
             out=err_clob,
             out_count=err_num,
@@ -146,11 +146,13 @@ class Method(CftElement):
             # **dict((key, self.texts[key]) for key in cursor_vars)
         )
         err_num = int(err_num.getvalue())
-        print(err_num)
-        print(err_clob.getvalue())
+        print("err_num=", err_num)
+        print("err_clob=", err_clob.getvalue())
 
-        if out_others.getvalue():
-            print(out_others.getvalue().read(), '1251')
+        print("OTHERS=", out_others.getvalue())
+
+        # if others:
+        #     print(others.read(), '1251')
 
         db.cnn.commit()
 

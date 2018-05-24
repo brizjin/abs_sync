@@ -84,10 +84,7 @@ def cli(ctx):
     # return ctx
 
 
-@cli.group()
-def push():
-    """Отправить операции"""
-    click.echo('Initialized the database')
+
 
 
 @cli.group()
@@ -191,6 +188,7 @@ def pull_all(ctx, db):
     cfg = read_parameters()
     db = db if db else cfg['db']
     cnn = Db(config.dbs[db])
+    click.echo('Подключаемся к базе %s' % cnn.select_sid())
 
     save_methods.CftSchema.remove_unknown_files_on_disk()
     disk_schema = save_methods.CftSchema.read_disk_schema()
@@ -219,7 +217,6 @@ def pull_time(ctx, count, unit, db):
     cfg = read_parameters()
     db = db if db else cfg['db']
     cnn = Db(config.dbs[db])
-
     click.echo('Подключаемся к базе %s' % cnn.select_sid())
 
     if count is None:
@@ -258,6 +255,30 @@ def pull_list():
 # def pull(name):
 #     print("name", name)
 #     click.echo('Dropped the database %s' % name)
+
+@cli.group()
+def push():
+    """Отправить операции"""
+
+
+    click.echo('Initialized the database')
+
+@push.command(name="list")
+@click.option('--db', help="База данных для подключения")
+@click.argument('list', required=False)
+def list(db, list):
+    cfg = read_parameters()
+    db = db if db else cfg['db']
+    cnn = Db(config.dbs[db])
+    click.echo('Подключаемся к базе %s' % cnn.select_sid())
+
+    click.echo(list)
+    elements = list.split(',')
+    where = " or ".join(["CLASS == '%s' and NAME == '%s'" % tuple(element.split('.')) for element in elements])
+    disk_schema = save_methods.CftSchema.read_disk_schema()
+    for element in save_methods.CftSchema(disk_schema.as_df().query(where)).as_cls():
+        element.read_from_disk()
+        element.write_to_db(cnn)
 
 
 if __name__ == '__main__':
