@@ -17,3 +17,4 @@ venv/
 .idea/dataSources.local.xml
 .idea/dataSources/
 logs/
+/abs2.egg-info/*

@@ -42,7 +42,7 @@ db_obj_sql_text = """
                       left join all_triggers t on u.OBJECT_NAME = t.TRIGGER_NAME
                       where object_type = 'TRIGGER'
             union all select 'PACKAGES' CLASS, OBJECT_NAME NAME, LAST_DDL_TIME MODIFIED, 'PACKAGE' TYPE
-                      from SYS.ALL_OBJECTS obj where UPPER(OBJECT_TYPE) = 'PACKAGE'
+                      from SYS.ALL_OBJECTS obj where UPPER(OBJECT_TYPE) = 'PACKAGE' and OBJECT_NAME='ISIMPLE2CIT'
             """
 
 method_parts = ['body', 'validate', 'globals', 'locals', 'script']
@@ -146,10 +146,9 @@ class Method(CftElement):
             # **dict((key, self.texts[key]) for key in cursor_vars)
         )
         err_num = int(err_num.getvalue())
-        print("err_num=", err_num)
-        print("err_clob=", err_clob.getvalue())
-
-        print("OTHERS=", out_others.getvalue())
+        print("Всего сообщений: ", err_num)
+        print(err_clob.getvalue())
+        # print("OTHERS=", out_others.getvalue())
 
         # if others:
         #     print(others.read(), '1251')

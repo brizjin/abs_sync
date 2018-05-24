@@ -1,19 +1,19 @@
-import cx_Oracle
 import json
 import os
-import pandas as pd
-import shutil
-from pathlib import Path
-import click
+import re
+import time
 from cx_Oracle import Connection
 
-from numpy import nan
+import click
+import cx_Oracle
+import pandas as pd
+import schedule
 
 import config
-import dirs
-import oracle_connection
+import git_funcs
+import log
 import save_methods
-from refresh_methods import update_for_time, update, update_from_dir_list
+from refresh_methods import update
 
 
 class Db:
@@ -75,7 +75,16 @@ def cli(ctx):
 
     \b
     Примеры использования:
-    abs2 pull p2
+    1.  Посмотреть настройки:               abs env print
+    2.  Установить текущий каталог проекта: abs env set PROJECT_DIRECTORY=C:\\Users\\BryzzhinIS\\Documents\\Хранилища\\pack_texts
+    3.  Установить текущую базу для работы: abs env set DB=p2
+    4.1 Получить все изменившиеся исходники за 2 минуты:            abs pull time -m 2
+    4.2 Получить все изменившиеся исходники за 2 часа:              abs pull time -h 2
+    4.3 Получить все изменившиеся исходники за 2 дня:               abs pull time -d 2
+    4.4 Получить все изменившиеся исходники за 2 дня с базы mid:    abs pull time -d 2 --db mid
+    5.1 Получить последнюю версию всех операций из каталога проета: abs pull all
+    5.2 ... по базе мид:                                            abs pull all --db mid
+    6.  Отправить исходники и перекомпилировать операцию: abs push list BRK_MSG.EDIT_AUTO,BRK_MSG.NEW_AUTO
     """
 
     pass
@@ -84,7 +93,34 @@ def cli(ctx):
     # return ctx
 
 
+@cli.command(name="tns", help="Вывести на экран TNS по-умолчанию")
+def tns():
+    print_cfg(config.dbs)
 
+
+@cli.command(name="sync", help='!!Не использовать')
+@click.option('-s', 's', flag_value='m', default=False)
+def sync(s):
+    if s:
+        def do_schedule(connection_string):
+            # cnn_object = cx_Oracle.connect(connection_string)
+            m = re.match(r"(?P<user>.+)/(?P<pass>.+)@(?P<dbname>.+)", connection_string)
+            db_name = m.group('dbname')
+            log.log_init(db_name)
+            # schedule.every(5).seconds.do(git_funcs.update, connection_string)
+            schedule.every(1).hours.do(git_funcs.update, connection_string)
+            git_funcs.update(connection_string)
+
+        do_schedule("ibs/HtuRhtl@day")
+        do_schedule("ibs/HtuRhtl@mideveryday")
+        do_schedule("ibs/HtuRhtl@msb")
+        do_schedule("ibs/HtuRhtl@lw-ass-abs")
+        do_schedule("ibs/HtuRhtl@lw-abs-abs")
+        do_schedule("ibs/HtuRhtl@lw-p2-abs")
+        do_schedule("ibs/HtuRhtl@midabs")
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
 
 
 @cli.group()
@@ -233,7 +269,9 @@ def pull_time(ctx, count, unit, db):
 
 @pull.command(name="list")
 def pull_list():
-    click.echo("pull list")
+    """Получить операции по списку"""
+    pass
+    # click.echo("pull list")
 
 
 # @pull.command(name="t")
@@ -259,9 +297,9 @@ def pull_list():
 @cli.group()
 def push():
     """Отправить операции"""
+    pass
+    # click.echo('Initialized the database')
 
-
-    click.echo('Initialized the database')
 
 @push.command(name="list")
 @click.option('--db', help="База данных для подключения")
