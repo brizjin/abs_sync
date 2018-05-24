@@ -1,11 +1,20 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='abs2',
-    version='0.0.8',
+    version='0.0.12',
     # py_modules=['abs2', 'config', 'git_funcs', 'log', 'save_methods', 'selects'],
-    # eager_resources=['sql/method_sources.tst', 'sql/save_method_sources.tst'],
-    include_package_data=True,
+    eager_resources=['sql/method_sources.tst', 'sql/save_method_sources.tst'],
+    packages=find_packages(),
+    # include_package_data=True,
+    # zip_safe=False,
+    package_data={
+        # If any package contains *.txt or *.rst files, include them:
+        # '': ['*.txt', '*.rst'],
+        '': ['sql/*.tst'],
+        # And include any *.msg files found in the 'hello' package, too:
+        # 'hello': ['*.msg'],
+    },
     install_requires=[
         'Click',
         'pandas',

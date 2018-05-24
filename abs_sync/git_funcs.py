@@ -258,7 +258,7 @@ def update(connection_string):
             # except IndexError:
             #     pass
 
-            git_funcs.commit_by_dataframe(repo, df, db_name, days_delta)
+            commit_by_dataframe(repo, df, db_name, days_delta)
             # repo.remotes['origin'].push(refspec='{}:refs/heads/autosave/{}'.format(branch_name, branch_name))
             repo.remotes['origin'].push(refspec='{}:{}'.format(branch_name, branch_name))
         else:
