@@ -33,10 +33,12 @@ def read_parameters():
 
 git_url = "http://git.brc.local:3000/ivan.bryzzhin/abs.git"
 git_folder = r"C:\Users\BryzzhinIS\Documents\Хранилища\sync_script\dbs"
-texts_working_dir = r"C:\Users\BryzzhinIS\Documents\Хранилища\pack_texts"
+
+parameters = read_parameters()
+texts_working_dir = parameters.get('project_directory')  # r"C:\Users\BryzzhinIS\Documents\Хранилища\pack_texts"
 
 if "ORACLE_HOME" not in os.environ:
-    os.environ["ORACLE_HOME"] = read_parameters().get('oracle_home')
+    os.environ["ORACLE_HOME"] = parameters.get('oracle_home')
 os.environ['NLS_LANG'] = '.AL32UTF8'
 
 # кол-во дней от текущей даты на базе
