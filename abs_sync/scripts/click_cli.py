@@ -1,5 +1,3 @@
-import json
-import os
 import re
 import time
 from cx_Oracle import Connection
@@ -10,9 +8,8 @@ import pandas as pd
 import schedule
 
 from abs_sync import config, save_methods, git_funcs, log
-
-
 # from refresh_methods import update
+from abs_sync.config import read_parameters, write_parameters, default_parameters
 
 
 class Db:
@@ -127,27 +124,7 @@ def env():
     """Параметры выполнения комманд"""
 
 
-def default_parameters():
-    return dict(db_user_name='ibs', db='p2', project_directory=config.texts_working_dir,
-                oracle_home=os.environ["ORACLE_HOME"])
 
-
-def write_parameters(cfg):
-    if not os.path.exists(os.path.dirname(config.user_config_file_name)):
-        os.makedirs(os.path.dirname(config.user_config_file_name))
-    with open(config.user_config_file_name, 'w+') as f:
-        f.write(json.dumps(cfg))
-
-
-def read_parameters():
-    if os.path.isfile(config.user_config_file_name):
-        with open(config.user_config_file_name, 'r') as f:
-            cfg = json.load(f)
-
-    else:
-        cfg = default_parameters()
-        write_parameters(cfg)
-    return cfg
 
 
 def print_cfg(cfg):
@@ -170,7 +147,7 @@ def env_set(params):
     cfg = read_parameters()
     for p in params:
         key, value = p.split('=')
-        cfg[key] = value
+        cfg[key.lower()] = value
     write_parameters(cfg)
     print_cfg(read_parameters())
 

@@ -1,15 +1,40 @@
 # coding=utf-8
+import json
 import os
 
 import pandas as pd
+
+
+def default_parameters():
+    return dict(db_user_name='ibs', db='p2', project_directory=texts_working_dir,
+                oracle_home=os.environ["ORACLE_HOME"])
+
+
+def write_parameters(cfg):
+    if not os.path.exists(os.path.dirname(user_config_file_name)):
+        os.makedirs(os.path.dirname(user_config_file_name))
+    with open(user_config_file_name, 'w+') as f:
+        f.write(json.dumps(cfg))
+
+
+def read_parameters():
+    if os.path.isfile(user_config_file_name):
+        with open(user_config_file_name, 'r') as f:
+            cfg = json.load(f)
+
+    else:
+        cfg = default_parameters()
+        write_parameters(cfg)
+    return cfg
+
 
 project_root = os.path.dirname(os.path.realpath(__file__))
 git_url = "http://git.brc.local:3000/ivan.bryzzhin/abs.git"
 git_folder = r"C:\Users\BryzzhinIS\Documents\Хранилища\sync_script\dbs"
 texts_working_dir = r"C:\Users\BryzzhinIS\Documents\Хранилища\pack_texts"
-# prj_dir = "C:/Users/BryzzhinIS/Documents/Хранилища/pack_texts"
+
 if "ORACLE_HOME" not in os.environ:
-    os.environ["ORACLE_HOME"] = "C:/app/BryzzhinIS/product/11.2.0/client_1/"
+    os.environ["ORACLE_HOME"] = read_parameters().get('oracle_home')
 os.environ['NLS_LANG'] = '.AL32UTF8'
 
 user_config_file_name = os.path.join(project_root, "config", "default.json")
@@ -145,10 +170,9 @@ dbs = {
     # 'midday': "ibs/HtuRhtl@MIDEVERYDAY",
     'ass': "ibs/HtuRhtl@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = lw-ass-abs.brc.local)(PORT = 1521)))(CONNECT_DATA =(SID = assabs)))",
     'abs': "ibs/HtuRhtl@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = lw-abs-abs.brc.local)(PORT = 1521)))(CONNECT_DATA =(SID = lwabsabs)))",
-    'p2':  "ibs/HtuRhtl@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = lw-p2-abs.brc.local)(PORT = 1521)))(CONNECT_DATA =(SID = lwp2abs)))",
+    'p2': "ibs/HtuRhtl@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = lw-p2-abs.brc.local)(PORT = 1521)))(CONNECT_DATA =(SID = lwp2abs)))",
     'msb': "ibs/HtuRhtl@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = lw-abs-abs-msb.brc.local)(PORT = 1521)))(CONNECT_DATA =(SID = msb)))",
     'mid': "ibs/HtuRhtl@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = mid-abs.brc.local)(PORT = 1521)))(CONNECT_DATA =(SID = midabs)))",
     'midday': "ibs/HtuRhtl@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = 172.21.13.152)(PORT = 1521)))(CONNECT_DATA =(SID = Midabsev)))",
     'day': "ibs/HtuRhtl@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = lw-abs-abs-everyday)(PORT = 1521)))(CONNECT_DATA =(SID = lwabsev)))",
 }
-
