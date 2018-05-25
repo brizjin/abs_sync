@@ -6,7 +6,7 @@ import cx_Oracle
 import pandas as pd
 
 from abs_sync import config, dirs
-from strings import nstr
+from abs_sync.strings import nstr
 
 logger = logging.getLogger('root')
 pd.options.display.width = 300
