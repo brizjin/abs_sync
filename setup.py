@@ -1,8 +1,8 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='abs2',
-    version='0.0.12',
+    name='abs',
+    version='0.0.13',
     # py_modules=['abs2', 'config', 'git_funcs', 'log', 'save_methods', 'selects'],
     eager_resources=['sql/method_sources.tst', 'sql/save_method_sources.tst'],
     packages=find_packages(),

@@ -8,7 +8,7 @@ import schedule
 from git import Actor
 
 from abs_sync import git_funcs, log
-from dirs import write_object_from_row
+from abs_sync.dirs import write_object_from_row
 from abs_sync.git_funcs import clone_or_open_repo
 from abs_sync.selects import *
 

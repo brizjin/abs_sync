@@ -5,8 +5,7 @@ import traceback
 import cx_Oracle
 import pandas as pd
 
-from abs_sync import config
-import dirs
+from abs_sync import config, dirs
 from strings import nstr
 
 logger = logging.getLogger('root')

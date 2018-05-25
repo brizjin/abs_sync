@@ -1,6 +1,6 @@
 import unittest
 
-import dirs
+from abs_sync import dirs
 
 
 class DirsTest(unittest.TestCase):
