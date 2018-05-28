@@ -10,7 +10,7 @@ user_config_file_name = os.path.join(project_root, "config", "default.json")
 
 def default_parameters():
     return dict(db_user_name='ibs', db='p2', project_directory=r"C:\Users\BryzzhinIS\Documents\Хранилища\pack_texts",
-                oracle_home=os.environ["ORACLE_HOME"])
+                oracle_home=os.environ.get("ORACLE_HOME", "C:/app/BryzzhinIS/product/11.2.0/client_1/"))
 
 
 def write_parameters(cfg):
