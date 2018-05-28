@@ -18,3 +18,4 @@ venv/
 .idea/dataSources/
 logs/
 /abs2.egg-info/*
+/abs.egg-info/*

@@ -8,6 +8,11 @@ project_root = os.path.dirname(os.path.realpath(__file__))
 user_config_file_name = os.path.join(project_root, "config", "default.json")
 
 
+def default_parameters():
+    return dict(db_user_name='ibs', db='p2', project_directory=r"C:\Users\BryzzhinIS\Documents\Хранилища\pack_texts",
+                oracle_home=os.environ["ORACLE_HOME"])
+
+
 def write_parameters(cfg):
     if not os.path.exists(os.path.dirname(user_config_file_name)):
         os.makedirs(os.path.dirname(user_config_file_name))
@@ -26,18 +31,11 @@ def read_parameters():
     return cfg
 
 
-def default_parameters():
-    parameters = read_parameters()
-    texts_working_dir = parameters.get('project_directory')  # r"C:\Users\BryzzhinIS\Documents\Хранилища\pack_texts"
-    return dict(db_user_name='ibs', db='p2', project_directory=texts_working_dir,
-                oracle_home=os.environ["ORACLE_HOME"])
-
-
 git_url = "http://git.brc.local:3000/ivan.bryzzhin/abs.git"
 git_folder = r"C:\Users\BryzzhinIS\Documents\Хранилища\sync_script\dbs"
 
 parameters = read_parameters()
-texts_working_dir = parameters.get('project_directory')  # r"C:\Users\BryzzhinIS\Documents\Хранилища\pack_texts"
+texts_working_dir = parameters.get('project_directory')  #
 
 if "ORACLE_HOME" not in os.environ:
     os.environ["ORACLE_HOME"] = parameters.get('oracle_home')
