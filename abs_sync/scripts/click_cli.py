@@ -10,56 +10,7 @@ import schedule
 from abs_sync import config, save_methods, git_funcs, log
 # from refresh_methods import update
 from abs_sync.config import read_parameters, write_parameters, default_parameters
-
-
-class Db:
-    def __init__(self, connection_string):
-        self.connection_string = connection_string
-        self.username = str(connection_string[:connection_string.find('/')])
-        self.password = str(connection_string[connection_string.find('/') + 1:connection_string.find('@')])
-        self.dsn = str(connection_string[connection_string.find('@') + 1:])
-        self.cnn = Connection(user=self.username, password=self.password, dsn=self.dsn)
-
-    def __str__(self):
-        return "%s.%s[%s]" % (self.__module__, self.__class__.__name__, self.connection_string)
-
-    def select(self, sql_text, **kwargs):
-        cursor = self.cnn.cursor()
-        try:
-            cursor.execute(sql_text, **kwargs)
-            desc = [d[0] for d in cursor.description]
-            df = pd.DataFrame(cursor.fetchall(), columns=desc)
-            # df = df.fillna(value=nan)
-            df = df.fillna('')
-            return df
-        finally:
-            cursor.close()
-
-    def execute_plsql(self, pl_sql_text, **kwargs):
-        cursor_vars = {}
-
-        cursor = self.cnn.cursor()
-        try:
-            for k, v in kwargs.items():
-                if v in (cx_Oracle.CLOB, cx_Oracle.BLOB, cx_Oracle.NCHAR, cx_Oracle.NUMBER):
-                    cursor_vars[k] = cursor.var(v)
-                else:
-                    cursor_vars[k] = v
-
-            cursor.execute(pl_sql_text, **cursor_vars)
-
-            for k, v in kwargs.items():
-                if v in (cx_Oracle.CLOB, cx_Oracle.BLOB, cx_Oracle.NCHAR, cx_Oracle.NUMBER):
-                    value = cursor_vars[k].getvalue()
-                    if value and v in (cx_Oracle.CLOB, cx_Oracle.BLOB):
-                        value = value.read()
-                    cursor_vars[k] = value
-            return cursor_vars
-        finally:
-            cursor.close()
-
-    def select_sid(self):
-        return self.select("select sys_context('userenv','instance_name') sid from dual")["SID"][0]
+from abs_sync.save_methods import pull_all_objects, pull_last_objects, Db
 
 
 @click.group()
@@ -107,13 +58,17 @@ def sync(s):
             schedule.every(1).hours.do(git_funcs.update, connection_string)
             git_funcs.update(connection_string)
 
-        do_schedule("ibs/HtuRhtl@day")
-        do_schedule("ibs/HtuRhtl@mideveryday")
-        do_schedule("ibs/HtuRhtl@msb")
-        do_schedule("ibs/HtuRhtl@lw-ass-abs")
-        do_schedule("ibs/HtuRhtl@lw-abs-abs")
-        do_schedule("ibs/HtuRhtl@lw-p2-abs")
-        do_schedule("ibs/HtuRhtl@midabs")
+        dbs = ["day", "mideveryday", "msb", "lw-ass-abs", "lw-abs-abs", "lw-p2-abs", "midabs", "mid-abs-ssd"]
+        # do_schedule("ibs/HtuRhtl@day")
+        # do_schedule("ibs/HtuRhtl@mideveryday")
+        # do_schedule("ibs/HtuRhtl@msb")
+        # do_schedule("ibs/HtuRhtl@lw-ass-abs")
+        # do_schedule("ibs/HtuRhtl@lw-abs-abs")
+        # do_schedule("ibs/HtuRhtl@lw-p2-abs")
+        # do_schedule("ibs/HtuRhtl@midabs")
+        # do_schedule("ibs/HtuRhtl@ssd")
+        for db_name in dbs:
+            do_schedule("ibs/HtuRhtl@%s" % db_name)
         while True:
             schedule.run_pending()
             time.sleep(1)
@@ -122,9 +77,6 @@ def sync(s):
 @cli.group()
 def env():
     """Параметры выполнения комманд"""
-
-
-
 
 
 def print_cfg(cfg):
@@ -202,17 +154,8 @@ def pull_all(ctx, db):
     cnn = Db(config.dbs[db])
     click.echo('Подключаемся к базе %s' % cnn.select_sid())
 
-    save_methods.CftSchema.remove_unknown_files_on_disk()
-    disk_schema = save_methods.CftSchema.read_disk_schema()
-    db_schema = save_methods.CftSchema.read_db_schema(cnn, disk_schema.elements)
+    df2 = pull_all_objects(cnn)
 
-    df1 = disk_schema.as_df()
-    df2 = db_schema.as_df()
-    df4 = pd.merge(df1, df2, indicator=True, how='outer').query('_merge=="left_only"').drop('_merge', axis=1)
-    for m in save_methods.CftSchema(df4).as_cls():
-        m.remove_from_disk()
-
-    db_schema.write_to_disk_from_db(cnn)
     click.echo(str(df2.sort_values(['CLASS', 'NAME'])))
 
 
@@ -238,9 +181,8 @@ def pull_time(ctx, count, unit, db):
         click.echo(ctx.get_help())
         return
 
-    db_schema = save_methods.CftSchema.read_db_schema_by_time(cnn, count, unit)
-    print(db_schema.as_df())
-    db_schema.write_to_disk_from_db(cnn)
+    df = pull_last_objects(cnn, count, unit)
+    click.echo(str(df.sort_values(['CLASS', 'NAME'])))
 
 
 @pull.command(name="list")

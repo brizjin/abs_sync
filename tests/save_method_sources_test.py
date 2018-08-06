@@ -5,7 +5,7 @@ import os
 import pandas as pd
 
 from abs_sync import config, save_methods
-from abs_sync.scripts.abs2 import Db
+from abs_sync.scripts.click_cli import Db
 
 
 class SaveMethodTest(unittest.TestCase):
@@ -65,11 +65,12 @@ class CftSchemaTest(unittest.TestCase):
         cnn = Db(config.dbs['mid'])
         # schema = save_methods.CftSchema.read_db(cnn, save_methods.CftSchema.read_disk().elements)
         # print(schema.as_df())
-        m = save_methods.Method('BRK_MSG', 'EDIT_AUTO')
+        m = save_methods.Method('BRK_MSG', 'POST_PROC_LIB')
         m.read_from_db(cnn)
-        print(m.texts)
+        print(m.texts['globals'])
+        print('~~~~~~~~~~')
         m.write_to_disk()
-        print(m.read_from_disk().texts)
+        print(m.read_from_disk().texts['globals'])
 
     def test_read_view_from_db(self):
         cnn = Db(config.dbs['p2'])
@@ -90,3 +91,9 @@ class CftSchemaTest(unittest.TestCase):
         print(m.texts)
         # m.write_to_disk()
         # print(m.read_from_disk().texts)
+
+    def test_pull_from_time(self):
+        db = save_methods.Db("ibs/HtuRhtl@day")
+        df = save_methods.CftSchema.read_db_schema_by_time(db, 7, 'd')
+        print(df.as_df())
+        # disk_schema = save_methods.CftSchema.read_disk_schema()

@@ -1,12 +1,19 @@
+import datetime
+import logging
 import os
 import re
 import shutil
+import traceback
 from pathlib import Path
 
 import cx_Oracle
 import pandas as pd
 
 from abs_sync import config
+from abs_sync.git_funcs import clone_or_open_repo, select_tune_date_update, create_tune_date_update, tune_branch_name, \
+    commit_by_dataframe
+from abs_sync.selects import select_sysdate
+from cx_Oracle import Connection
 
 
 def read_tst(file_name):
@@ -26,10 +33,85 @@ def read_if_exists(file_name):
         return read(file_name)
 
 
+def pull_all_objects(cnn, from_date=None):
+    CftSchema.remove_unknown_files_on_disk()
+    disk_schema = CftSchema.read_disk_schema()
+    db_schema = CftSchema.read_db_schema(cnn, disk_schema.elements)
+
+    df1 = disk_schema.as_df()
+    df2 = db_schema.as_df()
+    df4 = pd.merge(df1, df2, indicator=True, how='outer').query('_merge=="left_only"').drop('_merge', axis=1)
+    if from_date:
+        time_schema = CftSchema.read_db_schema_from_time(from_date)
+        df4 = pd.merge(df4, time_schema, indicator=True, how='outer').query('_merge=="left_only"').drop('_merge',
+                                                                                                        axis=1)
+    for m in CftSchema(df4).as_cls():
+        m.remove_from_disk()
+
+    db_schema.write_to_disk_from_db(cnn)
+    return df2
+
+
+def pull_last_objects(cnn, count, unit):
+    db_schema = CftSchema.read_db_schema_by_time(cnn, count, unit)
+    db_schema.write_to_disk_from_db(cnn)
+    return db_schema.as_df()
+
+
+def pull_time_objects(cnn, from_date):
+    db_schema = CftSchema.read_db_schema_from_time(cnn, from_date)
+    db_schema.write_to_disk_from_db(cnn)
+    return db_schema.as_df()
+
+
 class Db:
     def __init__(self, connection_string):
         self.connection_string = connection_string
-        self.cnn = cx_Oracle.connect(connection_string)
+        self.username = str(connection_string[:connection_string.find('/')])
+        self.password = str(connection_string[connection_string.find('/') + 1:connection_string.find('@')])
+        self.dsn = str(connection_string[connection_string.find('@') + 1:])
+        self.cnn = Connection(user=self.username, password=self.password, dsn=self.dsn)
+
+    def __str__(self):
+        return "%s.%s[%s]" % (self.__module__, self.__class__.__name__, self.connection_string)
+
+    def select(self, sql_text, **kwargs):
+        cursor = self.cnn.cursor()
+        try:
+            cursor.execute(sql_text, **kwargs)
+            desc = [d[0] for d in cursor.description]
+            df = pd.DataFrame(cursor.fetchall(), columns=desc)
+            # df = df.fillna(value=nan)
+            df = df.fillna('')
+            return df
+        finally:
+            cursor.close()
+
+    def execute_plsql(self, pl_sql_text, **kwargs):
+        cursor_vars = {}
+
+        cursor = self.cnn.cursor()
+        try:
+            for k, v in kwargs.items():
+                if v in (cx_Oracle.CLOB, cx_Oracle.BLOB, cx_Oracle.NCHAR, cx_Oracle.NUMBER):
+                    cursor_vars[k] = cursor.var(v)
+                else:
+                    cursor_vars[k] = v
+
+            cursor.execute(pl_sql_text, **cursor_vars)
+
+            for k, v in kwargs.items():
+                if v in (cx_Oracle.CLOB, cx_Oracle.BLOB, cx_Oracle.NCHAR, cx_Oracle.NUMBER):
+                    value = cursor_vars[k].getvalue()
+                    if value and v in (cx_Oracle.CLOB, cx_Oracle.BLOB):
+                        value = value.read()
+                    cursor_vars[k] = value
+            return cursor_vars
+        finally:
+            cursor.close()
+
+    def select_sid(self):
+        return self.select("select sys_context('userenv','instance_name') sid from dual")["SID"][0]
 
 
 save_method_sources_tst = read_tst(os.path.join(config.project_root, "sql", "save_method_sources.tst"))
@@ -78,7 +160,7 @@ def write_text(text, filename):
         if not os.path.exists(dirname):
             os.makedirs(dirname)
         with open(filename, "wb+") as f:
-            text = re.sub(r'[ \t\r\f\v]*\n', '\n', text, flags=re.M)
+            # text = re.sub(r'[ \t\r\f\v]*\n', '\n', text, flags=re.M)
             # f.write(text.replace('\n', '\r\n').encode())
             f.write(text.encode())
     else:
@@ -300,9 +382,132 @@ class CftSchema:
                     order by modified desc nulls last""" % (db_obj_sql_text, num, time_interval[interval_name]))
         return CftSchema(df)
 
+    @staticmethod
+    def read_db_schema_from_time(cnn, from_date):
+        df = cnn.select("""
+                    select TYPE, CLASS_ID, SHORT_NAME from (%s)
+                    where modified between to_date('%s','dd.mm.yyyy hh24:mi:ss') and sysdate
+                    order by modified desc nulls last""" % (db_obj_sql_text, from_date))
+        return CftSchema(df)
+
     def as_df(self):
         return pd.DataFrame(self.elements, columns=['TYPE', 'CLASS', 'NAME'])
 
     def as_cls(self):
         element_classes = {'METHOD': Method, 'VIEW': View, 'PACKAGE': Package, 'TRIGGER': Trigger, 'UNKNOWN': Unknown}
         return [element_classes[row[0]](row[1], row[2]) for row in self.elements]
+
+
+last_dates_update = {}
+dbs = {}
+
+
+def update(connection_string):
+    # global last_date_update
+    # df = None
+    m = re.match(r"(?P<user>.+)/(?P<pass>.+)@(?P<dbname>.+)", connection_string)
+    db_name = m.group('dbname')
+
+    db_logger = logging.getLogger(db_name)
+    db_logger.debug("update %s" % db_name)
+
+    db = dbs.get(connection_string)
+    if not db:
+        try:
+            # cnn = cx_Oracle.connect(connection_string)
+            db = Db(connection_string)
+            dbs[connection_string] = db
+        except cx_Oracle.DatabaseError as e:
+            error = e.args[0]
+            # print "Code:", error.code
+            # print "Message:", error.message
+            dbs[connection_string] = None
+            db_logger.exception(
+                "update exception on connection to database code=%s, message=%s" % (error.code, error.message))
+            return
+
+    try:
+        last_date_update = last_dates_update.get(db_name)
+        sysdate = select_sysdate(db.cnn)
+        # кол-во дней на которые на сервере передвинули время
+        # корректируем дату коммитов на эту дельту
+        days_delta = datetime.timedelta(days=(
+                datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - sysdate.replace(hour=0,
+                                                                                                             minute=0,
+                                                                                                             second=0,
+                                                                                                             microsecond=0)).days)
+        db_logger.debug("delta_days=%s, datetime.datetime.now()=%s, sysdate=%s" % (
+            days_delta, datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0),
+            sysdate.replace(hour=0, minute=0, second=0, microsecond=0)))
+
+        if not last_date_update:
+            last_date_update = sysdate - datetime.timedelta(days=config.days_update_on_start)
+            db_logger.debug("last_date_update is null set it to %s" % last_date_update)
+            # залогируем список пользователей за последний месяц правивших методы
+            # чтобы можно было найти тех по кому мы не сохраняем изменения
+            # db_logger.debug(",\n".join(["'%s'" % a for a in select_users(cnn)['USER_MODIFIED']]))
+
+        repo = clone_or_open_repo(os.path.join(config.git_folder, db_name), db_name)
+
+        if not select_tune_date_update(db.cnn):
+            db_logger.debug("update init_git_db")
+            create_tune_date_update(db.cnn)
+            # df = select_objects_in_folder_or_date_modified(cnn, last_date_update.strftime('%d.%m.%Y %H:%M:%S'))
+            df = pull_all_objects(db, last_date_update.strftime('%d.%m.%Y %H:%M:%S'))
+        else:
+            db_logger.debug("select object on date %s" % last_date_update.strftime('%d.%m.%Y %H:%M:%S'))
+            # df = select_all_by_date_modified(cnn, last_date_update.strftime('%d.%m.%Y %H:%M:%S'))
+            df = pull_time_objects(db, last_date_update.strftime('%d.%m.%Y %H:%M:%S'))
+        if len(df) > 0:
+
+            branch_name = tune_branch_name(db.cnn)
+            if branch_name in repo.branches:
+                # repo.heads[branch_name].checkout()
+                try:
+                    remote_branch_name = 'origin/%s' % branch_name
+                    repo.remotes['origin'].fetch(refspec='{}'.format(branch_name))
+                    repo.head.reset(commit=repo.refs[remote_branch_name], index=True, working_tree=True)
+                except Exception:
+                    db_logger.exception("exceprion checkout and reset %s %s" % (branch_name, traceback.format_exc()))
+            else:
+                try:
+                    repo.heads['master'].checkout()
+
+                    # with repo.remotes['origin'].config_writer as cw:
+                    #     cw.set("push", "refs/heads/*:refs/heads/qa/*")
+                    repo.remotes['origin'].fetch(refspec='{}'.format('master'))
+                    repo.head.reset(commit=repo.refs['origin/master'], index=True, working_tree=True)
+                except Exception:
+                    db_logger.exception("exceprion checkout and reset master %s" % traceback.format_exc())
+                repo.create_head(branch_name, 'master').checkout()
+
+            # try:
+            #     if repo.refs[remote_branch_name].tracking_branch():
+            #         repo.remotes['origin'].fetch(refspec='{}'.format(branch_name))
+            #         # repo.remotes['origin'].fetch(refspec='{}'.format(branch_name))
+            #         repo.head.reset(commit=repo.refs[remote_branch_name], index=True, working_tree=True)
+            # except IndexError:
+            #     pass
+
+            commit_by_dataframe(repo, df, db_name, days_delta)
+            # repo.remotes['origin'].push(refspec='{}:refs/heads/autosave/{}'.format(branch_name, branch_name))
+            repo.remotes['origin'].push(refspec='{}:{}'.format(branch_name, branch_name))
+        else:
+            db_logger.debug("up-to-date")
+
+        last_dates_update[db_name] = sysdate
+        db_logger.info("updated finish")
+
+    except cx_Oracle.DatabaseError as e:
+        error = e.args[0]
+        # ORA-01033: ORACLE initialization or shutdown in progress
+        # ORA-03114: not connected to ORACLE
+        if error.code in [1033, 3114]:
+            dbs[connection_string] = None
+            db_logger.exception(
+                "update db not init: %s, %s" % (error.code, error.message))
+        else:
+            db_logger.exception(
+                "update db exception code=%s, message=%s" % (error.code, error.message))
+    except Exception:
+        db_logger.exception("update exception %s" % traceback.format_exc())

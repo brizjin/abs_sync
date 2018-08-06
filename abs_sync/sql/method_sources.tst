@@ -1,4 +1,4 @@
-п»їPL/SQL Developer Test script 3.0
+PL/SQL Developer Test script 3.0
 54
 declare 
   c clob;
@@ -16,7 +16,7 @@ declare
     loop
       out_clob := out_clob || r.text || chr(10);
     end loop;
-    return ltrim(out_clob,chr(10));
+    return out_clob;
   end;
   
   /*function cpad(text varchar2,n integer,c char)return varchar2
@@ -54,14 +54,14 @@ begin
   :script := get_part(class_name,method_name,'VBSCRIPT');
 
 end;
-9
+14
 class_name
 1
-EXT_DOCS_SVOD
+BRK_MSG
 5
 method_name
 1
-NEW_AUTO
+POST_PROC_LIB
 5
 oper_type
 1
@@ -74,21 +74,65 @@ out
 e
 1
 <CLOB>
-112
+-112
 v
 1
 <CLOB>
-112
+-112
 g
 1
 <CLOB>
-112
+-112
 l
 1
 <CLOB>
-112
+-112
 s
 1
 <CLOB>
-112
+-112
+body
+0
+5
+validate
+0
+5
+globals
+29
+
+function  ObrProv(doc_ref ref [MAIN_DOCUM] default null) return CLOB;
+	-- ab-518  -- сделать вызов этой функции в учете проценов в зоде - нужно передать док причисления и не brk_msg
+
+--  процедуры для запуска в джобах:
+
+-- смена транзакционныой схеме пластика по факту смены документом статуса TO_KART
+procedure ObrKartEvents; -- не используется но можно запустить -- чисто по докам без использования brk_msg смена транзакционных схем картам при возникновении/гашении картотеки
+
+-- постобработка проводок
+procedure ObrProvEvents; --  -- не используется с аб-1611 но можно запустить чисто пр докам без использования brk_msg
+procedure ObrProvEventsMult(StreamNumber integer,StreamCount integer); -- ab-1611
+
+function GetStartDateTime  return date;
+PRAGMA RESTRICT_REFERENCES ( GetStartDateTime, WNDS );
+
+function IsTrn(hist_state [HISTORY_STAT_ARR], iddoc number) return number;
+PRAGMA RESTRICT_REFERENCES ( IsTrn, WNDS );
+
+function IsPST(hist_state [HISTORY_STAT_ARR]) return number;
+PRAGMA RESTRICT_REFERENCES ( IsPST, WNDS );
+
+
+
+
+
+
+
+
+5
+locals
+0
+5
+script
+0
+5
 0

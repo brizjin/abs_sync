@@ -1,14 +1,13 @@
 import unittest
 
+from abs_sync.scripts import click_cli
 from click.testing import CliRunner
-
-from abs_sync.scripts.abs2 import cli
 
 
 def call_cli(params=list()):
     print("###begin with params", params)
     runner = CliRunner()
-    result = runner.invoke(cli, params, obj={}, catch_exceptions=False)
+    result = runner.invoke(click_cli.cli, params, obj={}, catch_exceptions=False)
     print(result.output)
     print("###end")
 
@@ -41,3 +40,7 @@ class CliTest(unittest.TestCase):
 
     def test_pull3(self):
         call_cli(['pull', 'time'])
+
+    def test_pull_all(self):
+        # call_cli(['pull', 'all', '--db', 'day'])
+        call_cli(['sync', '-s'])
