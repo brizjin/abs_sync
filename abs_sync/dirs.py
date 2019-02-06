@@ -5,7 +5,7 @@ import pandas as pd
 
 from abs_sync import log
 
-logger = log.log_init("root")
+logger = log.get_logger("root")
 
 
 def objects_in_folder(dir_path):
@@ -37,8 +37,9 @@ def write_object(project_folder, class_id, short_name, extention, text):
         if not os.path.exists(dirname):
             os.makedirs(dirname)
         with open(filename, "wb+") as f:
-            part = re.sub(r'[ \t\r\f\v]*\n', '\n', text, flags=re.M)
+            # part = re.sub(r'[ \t\r\f\v]*\n', '\n', text, flags=re.M)
             # part = part.replace('\n', '\r\n').encode()
+            part = text
             part = part.encode()
             f.write(part)
 

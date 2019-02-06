@@ -11,8 +11,10 @@ logger = logging.getLogger('root')
 def clone_or_open_repo(git_dir, db_name='withoutdb'):
     # folder_path = os.path.join(config.git_folder, db_name)
     db_logger = logging.getLogger(db_name)
+    db_logger.setLevel(level=logging.DEBUG)
     if not os.path.isdir(os.path.join(git_dir, '.git')):
         db_logger.debug("clone repo %s to %s" % (config.git_url, git_dir))
+        from git.compat import force_bytes
         repo = Repo.clone_from(config.git_url, git_dir)
     else:
         repo = Repo(git_dir)
@@ -203,15 +205,14 @@ def update(connection_string):
         # кол-во дней на которые на сервере передвинули время
         # корректируем дату коммитов на эту дельту
         days_delta = datetime.timedelta(days=(
-            datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - sysdate.replace(hour=0,
-                                                                                                         minute=0,
-                                                                                                         second=0,
-                                                                                                         microsecond=0)).days)
-        db_logger.debug("delta_days=%s, datetime.datetime.now()=%s, sysdate=%s" % (
-            days_delta, datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0),
-            sysdate.replace(hour=0, minute=0, second=0, microsecond=0)))
-
+                datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - sysdate.replace(hour=0,
+                                                                                                             minute=0,
+                                                                                                             second=0,
+                                                                                                             microsecond=0)).days)
         if not last_date_update:
+            db_logger.debug("delta_days=%s, datetime.datetime.now()=%s, sysdate=%s" % (
+                days_delta, datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0),
+                sysdate.replace(hour=0, minute=0, second=0, microsecond=0)))
             last_date_update = sysdate - datetime.timedelta(days=config.days_update_on_start)
             db_logger.debug("last_date_update is null set it to %s" % last_date_update)
             # залогируем список пользователей за последний месяц правивших методы

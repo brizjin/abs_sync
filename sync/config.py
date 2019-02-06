@@ -1,3 +1,4 @@
+# coding=utf-8
 import json
 import os
 
@@ -30,8 +31,7 @@ def read_parameters():
     return cfg
 
 
-# git_url = "http://git.brc.local:3000/ivan.bryzzhin/abs.git"
-git_url = "https://gitlab.moduldev.ru/abs/plplus_texts"
+git_url = "http://git.brc.local:3000/ivan.bryzzhin/abs.git"
 git_folder = "C:/Users/BryzzhinIS/Documents/Хранилища/sync_script/dbs"
 
 parameters = read_parameters()
@@ -55,7 +55,6 @@ days_update_on_start = 7
 users_to_save_objects_in_git = [
     'BryzzhinIS',
     'DoblerEA',
-    'smirnovan'
     # 'Kirpichnikov',
     'SysovaEA',
     'UrypinaAV',

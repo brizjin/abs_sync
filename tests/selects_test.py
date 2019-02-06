@@ -2,6 +2,8 @@ import unittest
 
 import datetime
 
+import cx_Oracle as cx_Oracle
+
 from abs_sync import log
 from abs_sync.selects import *
 

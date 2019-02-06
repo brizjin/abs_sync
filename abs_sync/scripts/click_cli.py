@@ -48,12 +48,13 @@ def tns():
 @cli.command(name="sync", help='!!Не использовать')
 @click.option('-s', 's', flag_value='m', default=False)
 def sync(s):
+    print('sync')
     if s:
         def do_schedule(connection_string):
             # cnn_object = cx_Oracle.connect(connection_string)
             m = re.match(r"(?P<user>.+)/(?P<pass>.+)@(?P<dbname>.+)", connection_string)
             db_name = m.group('dbname')
-            log.log_init(db_name)
+            log.get_logger(db_name)
             # schedule.every(5).seconds.do(git_funcs.update, connection_string)
             schedule.every(1).hours.do(git_funcs.update, connection_string)
             git_funcs.update(connection_string)

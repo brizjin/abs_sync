@@ -5,7 +5,7 @@ import unittest
 import cx_Oracle as cx_Oracle
 import pandas as pd
 
-from abs_sync import config, dirs
+from abs_sync import config, dirs, git_funcs
 from abs_sync.selects import select_types_in_folder_or_date_modified, select_objects_in_folder_or_date_modified
 
 pd.options.display.width = 300
@@ -153,3 +153,7 @@ class DirsTest(unittest.TestCase):
     def test_clear_folder(self):
         # dirs.clear_folder(r"C:\Users\BryzzhinIS\Documents\Хранилища\test")
         dirs.clear_folder(r"C:\Users\BryzzhinIS\Documents\Хранилища\pack_texts")
+
+    def test_update(self):
+        connection_string = "ibs/HtuRhtl@day"
+        git_funcs.update(connection_string)

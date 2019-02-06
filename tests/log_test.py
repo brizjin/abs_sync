@@ -5,7 +5,7 @@ from abs_sync import log
 
 class LogTest(unittest.TestCase):
     def setUp(self):
-        self.logger = log.log_init("root")
+        self.logger = log.get_logger("root")
 
-    def test_check_if_database_is_updated(self):
+    def test_log(self):
         self.logger.info("test")
