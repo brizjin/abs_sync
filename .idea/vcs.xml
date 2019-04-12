@@ -2,5 +2,13 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/dbs_plplus_texts/day" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/dbs_plplus_texts/lw-abs-abs" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/dbs_plplus_texts/lw-ass-abs" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/dbs_plplus_texts/lw-p2-abs" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/dbs_plplus_texts/mid-abs-ssd" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/dbs_plplus_texts/midabs" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/dbs_plplus_texts/mideveryday" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/dbs_plplus_texts/msb" vcs="Git" />
   </component>
 </project>

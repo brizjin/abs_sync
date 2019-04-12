@@ -1,8 +1,9 @@
 import datetime
 import re
 
-from git import Repo, Actor
+from git import Repo, Actor, Git
 
+# from abs_sync.config import git_ssh_cmd
 from abs_sync.selects import *
 
 logger = logging.getLogger('root')
@@ -219,6 +220,7 @@ def update(connection_string):
             # чтобы можно было найти тех по кому мы не сохраняем изменения
             # db_logger.debug(",\n".join(["'%s'" % a for a in select_users(cnn)['USER_MODIFIED']]))
 
+        # with Git().custom_environment(GIT_SSH_COMMAND=git_ssh_cmd):
         repo = clone_or_open_repo(os.path.join(config.git_folder, db_name), db_name)
 
         if not select_tune_date_update(cnn):

@@ -1,7 +1,11 @@
 import json
+import logging
 import os
 
 import pandas as pd
+from git import Git
+
+logger = logging.getLogger(__file__)
 
 project_root = os.path.dirname(os.path.realpath(__file__))
 user_config_file_name = os.path.join(project_root, "config", "default.json")
@@ -31,8 +35,12 @@ def read_parameters():
 
 
 # git_url = "http://git.brc.local:3000/ivan.bryzzhin/abs.git"
-git_url = "https://gitlab.moduldev.ru/abs/plplus_texts"
+git_url = "https://gitlab.moduldev.ru/abs/plplus.git"
 git_folder = "C:/Users/BryzzhinIS/Documents/Хранилища/sync_script/dbs"
+# git_ssh_identity_file = os.path.expanduser('~/.ssh/id_rsa')
+# logger.debug()
+# git_ssh_cmd = 'ssh -i %s' % git_ssh_identity_file
+
 
 parameters = read_parameters()
 texts_working_dir = parameters.get('project_directory')  #
@@ -55,7 +63,7 @@ days_update_on_start = 7
 users_to_save_objects_in_git = [
     'BryzzhinIS',
     'DoblerEA',
-    'smirnovan'
+    'smirnovan',
     # 'Kirpichnikov',
     'SysovaEA',
     'UrypinaAV',
