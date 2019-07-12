@@ -3,4 +3,6 @@ cx_Oracle
 gitpython
 schedule
 click
-git+https://github.com/brcportal2/python-oracle-client@dev
+pyhamcrest
+pytest
+git+ssh://git@gitlab.moduldev.ru/abs/database-client.git@dev
