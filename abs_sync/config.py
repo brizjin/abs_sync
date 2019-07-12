@@ -3,7 +3,6 @@ import logging
 import os
 
 import pandas as pd
-from git import Git
 
 logger = logging.getLogger(__file__)
 
@@ -35,8 +34,9 @@ def read_parameters():
 
 
 # git_url = "http://git.brc.local:3000/ivan.bryzzhin/abs.git"
-git_url = "https://gitlab.moduldev.ru/abs/plplus.git"
-git_folder = "C:/Users/BryzzhinIS/Documents/Хранилища/sync_script/dbs"
+# git_url = "https://gitlab.moduldev.ru/abs/plplus.git"
+git_url = "git@gitlab.moduldev.ru:abs/plplus.git"
+git_folder = "C:/Users/BryzzhinIS/Documents/prj/pyprj/sync_script/dbs"
 # git_ssh_identity_file = os.path.expanduser('~/.ssh/id_rsa')
 # logger.debug()
 # git_ssh_cmd = 'ssh -i %s' % git_ssh_identity_file
@@ -64,6 +64,7 @@ users_to_save_objects_in_git = [
     'BryzzhinIS',
     'DoblerEA',
     'smirnovan',
+    'usovvs',
     # 'Kirpichnikov',
     'SysovaEA',
     'UrypinaAV',
@@ -186,4 +187,6 @@ dbs = {
     'mid': "ibs/HtuRhtl@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = mid-abs.brc.local)(PORT = 1521)))(CONNECT_DATA =(SID = midabs)))",
     'midday': "ibs/HtuRhtl@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = 172.21.13.152)(PORT = 1521)))(CONNECT_DATA =(SID = Midabsev)))",
     'day': "ibs/HtuRhtl@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = lw-abs-abs-everyday)(PORT = 1521)))(CONNECT_DATA =(SID = lwabsev)))",
-    'ssd': "ibs/HtuRhtl@(DESCRIPTION=(ADDRESS_LIST =(ADDRESS=(PROTOCOL=TCP)(HOST=172.21.13.214)(PORT=1521)))(CONNECT_DATA =(SID=midabs)))"}
+    'ssd': "ibs/HtuRhtl@(DESCRIPTION=(ADDRESS_LIST =(ADDRESS=(PROTOCOL=TCP)(HOST=172.21.13.214)(PORT=1521)))(CONNECT_DATA =(SID=midabs)))",
+    # 'absabs': "ibs/HtuRhtl@(DESCRIPTION =(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=lw-abs-abs.brc.local)(PORT=1521)))(CONNECT_DATA=(SID=lwabsabs)))",
+}

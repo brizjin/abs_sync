@@ -59,7 +59,7 @@ def sync(s):
             schedule.every(1).hours.do(git_funcs.update, connection_string)
             git_funcs.update(connection_string)
 
-        dbs = ["day", "mideveryday", "msb", "lw-ass-abs", "lw-abs-abs", "lw-p2-abs", "midabs", "mid-abs-ssd"]
+        dbs = ["day", "mideveryday", "msb", "lw-ass-abs", "lw-abs-abs", "lw-p2-abs", "midabs", "mid-abs-ssd", "abs"]
         # do_schedule("ibs/HtuRhtl@day")
         # do_schedule("ibs/HtuRhtl@mideveryday")
         # do_schedule("ibs/HtuRhtl@msb")

@@ -1,10 +1,9 @@
 import datetime
 import re
 
-from git import Repo, Actor, Git
-
 # from abs_sync.config import git_ssh_cmd
 from abs_sync.selects import *
+from git import Repo, Actor, Git
 
 logger = logging.getLogger('root')
 
@@ -13,9 +12,12 @@ def clone_or_open_repo(git_dir, db_name='withoutdb'):
     # folder_path = os.path.join(config.git_folder, db_name)
     db_logger = logging.getLogger(db_name)
     db_logger.setLevel(level=logging.DEBUG)
+    git_ssh_identity_file = os.path.expanduser('~/.ssh/id_rsa')
+    git_ssh_cmd = 'ssh -i %s' % git_ssh_identity_file
+    # with Git().custom_environment(GIT_SSH_COMMAND=git_ssh_cmd):
+    logger.debug('SSSSHHHH NEW')
     if not os.path.isdir(os.path.join(git_dir, '.git')):
         db_logger.debug("clone repo %s to %s" % (config.git_url, git_dir))
-        from git.compat import force_bytes
         repo = Repo.clone_from(config.git_url, git_dir)
     else:
         repo = Repo(git_dir)
