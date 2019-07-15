@@ -1,11 +1,12 @@
 import datetime
 import re
 
+from git import Repo, Actor
+
 # from abs_sync.config import git_ssh_cmd
 from abs_sync.selects import *
-from git import Repo, Actor, Git
 
-logger = logging.getLogger('root')
+logger = logging.getLogger(__name__)
 
 
 def clone_or_open_repo(git_dir, db_name='withoutdb'):
@@ -179,14 +180,22 @@ last_dates_update = {}
 dbs = {}
 
 
+def checkout_local_branch_and_reset_to_remote(repo, local_branch_name):
+    try:
+        remote_name = 'origin'
+        remote_branch_name = f'{remote_name}/{local_branch_name}'
+        repo.heads[local_branch_name].checkout()
+        repo.remotes[remote_name].fetch(refspec=f'{local_branch_name}')
+        repo.head.reset(commit=repo.refs[remote_branch_name], index=True, working_tree=True)
+    except repo.exc.GitCommandError:
+        logger.exception("error in checkout_remote")
+
+
 def update(connection_string):
     # global last_date_update
     # df = None
     m = re.match(r"(?P<user>.+)/(?P<pass>.+)@(?P<dbname>.+)", connection_string)
     db_name = m.group('dbname')
-
-    db_logger = logging.getLogger(db_name)
-    db_logger.debug("update %s" % db_name)
 
     cnn = dbs.get(connection_string)
     if not cnn:
@@ -198,7 +207,7 @@ def update(connection_string):
             # print "Code:", error.code
             # print "Message:", error.message
             dbs[connection_string] = None
-            db_logger.exception(
+            logger.exception(
                 "update exception on connection to database code=%s, message=%s" % (error.code, error.message))
             return
 
@@ -213,24 +222,24 @@ def update(connection_string):
                                                                                                              second=0,
                                                                                                              microsecond=0)).days)
         if not last_date_update:
-            db_logger.debug("delta_days=%s, datetime.datetime.now()=%s, sysdate=%s" % (
+            logger.debug("delta_days=%s, datetime.datetime.now()=%s, sysdate=%s" % (
                 days_delta, datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0),
                 sysdate.replace(hour=0, minute=0, second=0, microsecond=0)))
             last_date_update = sysdate - datetime.timedelta(days=config.days_update_on_start)
-            db_logger.debug("last_date_update is null set it to %s" % last_date_update)
+            logger.debug("last_date_update is null set it to %s" % last_date_update)
             # залогируем список пользователей за последний месяц правивших методы
             # чтобы можно было найти тех по кому мы не сохраняем изменения
-            # db_logger.debug(",\n".join(["'%s'" % a for a in select_users(cnn)['USER_MODIFIED']]))
+            # logger.debug(",\n".join(["'%s'" % a for a in select_users(cnn)['USER_MODIFIED']]))
 
         # with Git().custom_environment(GIT_SSH_COMMAND=git_ssh_cmd):
         repo = clone_or_open_repo(os.path.join(config.git_folder, db_name), db_name)
 
         if not select_tune_date_update(cnn):
-            db_logger.debug("update init_git_db")
+            logger.debug("update init_git_db")
             create_tune_date_update(cnn)
             df = select_objects_in_folder_or_date_modified(cnn, last_date_update.strftime('%d.%m.%Y %H:%M:%S'))
         else:
-            db_logger.debug("select object on date %s" % last_date_update.strftime('%d.%m.%Y %H:%M:%S'))
+            logger.debug("select object on date %s" % last_date_update.strftime('%d.%m.%Y %H:%M:%S'))
             df = select_all_by_date_modified(cnn, last_date_update.strftime('%d.%m.%Y %H:%M:%S'))
         if len(df) > 0:
 
@@ -242,7 +251,7 @@ def update(connection_string):
                     repo.remotes['origin'].fetch(refspec='{}'.format(branch_name))
                     repo.head.reset(commit=repo.refs[remote_branch_name], index=True, working_tree=True)
                 except Exception:
-                    db_logger.exception("exceprion checkout and reset %s %s" % (branch_name, traceback.format_exc()))
+                    logger.exception("exceprion checkout and reset %s %s" % (branch_name, traceback.format_exc()))
             else:
                 try:
                     repo.heads['master'].checkout()
@@ -252,7 +261,7 @@ def update(connection_string):
                     repo.remotes['origin'].fetch(refspec='{}'.format('master'))
                     repo.head.reset(commit=repo.refs['origin/master'], index=True, working_tree=True)
                 except Exception:
-                    db_logger.exception("exceprion checkout and reset master %s" % traceback.format_exc())
+                    logger.exception("exceprion checkout and reset master %s" % traceback.format_exc())
                 repo.create_head(branch_name, 'master').checkout()
 
             # try:
@@ -267,10 +276,10 @@ def update(connection_string):
             # repo.remotes['origin'].push(refspec='{}:refs/heads/autosave/{}'.format(branch_name, branch_name))
             repo.remotes['origin'].push(refspec='{}:{}'.format(branch_name, branch_name))
         else:
-            db_logger.debug("up-to-date")
+            logger.debug("up-to-date")
 
         last_dates_update[db_name] = sysdate
-        db_logger.info("updated finish")
+        logger.info("updated finish")
 
     except cx_Oracle.DatabaseError as e:
         error = e.args[0]
@@ -278,10 +287,8 @@ def update(connection_string):
         # ORA-03114: not connected to ORACLE
         if error.code in [1033, 3114]:
             dbs[connection_string] = None
-            db_logger.exception(
-                "update db not init: %s, %s" % (error.code, error.message))
+            logger.exception("update db not init: %s, %s" % (error.code, error.message))
         else:
-            db_logger.exception(
-                "update db exception code=%s, message=%s" % (error.code, error.message))
+            logger.exception("update db exception code=%s, message=%s" % (error.code, error.message))
     except Exception:
-        db_logger.exception("update exception %s" % traceback.format_exc())
+        logger.exception("update exception %s" % traceback.format_exc())

@@ -5,4 +5,5 @@ schedule
 click
 pyhamcrest
 pytest
+
 git+ssh://git@gitlab.moduldev.ru/abs/database-client.git@dev
