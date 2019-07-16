@@ -1,10 +1,9 @@
-import unittest
-
 import os
+import unittest
 
 import pandas as pd
 
-from abs_sync import config, save_methods
+from abs_sync import save_methods, config
 from abs_sync.scripts.click_cli import Db
 
 
@@ -34,7 +33,7 @@ class CftSchemaTest(unittest.TestCase):
         #     print(s)
 
     def test_read_from_db(self):
-        cnn = Db(config.dbs['p2'])
+        cnn = Db(config.TNS['p2'])
         schema = save_methods.CftSchema.read_db_schema(cnn, save_methods.CftSchema.read_disk_schema().elements)
         print(schema.as_df())
 
@@ -45,7 +44,7 @@ class CftSchemaTest(unittest.TestCase):
         db_name = 'p2'
         save_methods.CftSchema.remove_unknown_files_on_disk()
         disk_schema = save_methods.CftSchema.read_disk_schema()
-        cnn = Db(config.dbs[db_name])
+        cnn = Db(config.TNS[db_name])
         db_schema = save_methods.CftSchema.read_db_schema(cnn, disk_schema.elements)
 
         df1 = disk_schema.as_df()
@@ -62,7 +61,7 @@ class CftSchemaTest(unittest.TestCase):
                 element.write_to_disk()
 
     def test_read_method(self):
-        cnn = Db(config.dbs['mid'])
+        cnn = Db(config.TNS['mid'])
         # schema = save_methods.CftSchema.read_db(cnn, save_methods.CftSchema.read_disk().elements)
         # print(schema.as_df())
         m = save_methods.Method('BRK_MSG', 'POST_PROC_LIB')
@@ -73,7 +72,7 @@ class CftSchemaTest(unittest.TestCase):
         print(m.read_from_disk().texts['globals'])
 
     def test_read_view_from_db(self):
-        cnn = Db(config.dbs['p2'])
+        cnn = Db(config.TNS['p2'])
         # schema = save_methods.CftSchema.read_db(cnn, save_methods.CftSchema.read_disk().elements)
         # print(schema.as_df())
         m = save_methods.View('BRK_MSG', 'VW_RPT_BRK_MSG_SLA_GROUP')
@@ -83,7 +82,7 @@ class CftSchemaTest(unittest.TestCase):
         # print(m.read_from_disk().texts)
 
     def test_read_trigger(self):
-        cnn = Db(config.dbs['p2'])
+        cnn = Db(config.TNS['p2'])
         # schema = save_methods.CftSchema.read_db(cnn, save_methods.CftSchema.read_disk().elements)
         # print(schema.as_df())
         m = save_methods.Trigger('AC_FIN', 'BKB#AC_FIN')

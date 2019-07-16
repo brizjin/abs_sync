@@ -4,7 +4,7 @@ setup(
     name='abs',
     version='0.0.21',
     # py_modules=['abs2', 'config', 'git_funcs', 'log', 'save_methods', 'selects'],
-    eager_resources=['sql/method_sources.tst', 'sql/save_method_sources.tst'],
+    eager_resources=['sql/read_method_sources.tst', 'sql/save_method_sources.tst'],
     packages=find_packages(),
     # include_package_data=True,
     # zip_safe=False,

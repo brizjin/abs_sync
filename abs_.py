@@ -1,8 +1,10 @@
 import re
 import sys
 
-from abs_sync import config, save_methods
-import oracle_connection
+from database_client.oracle import OracleClient
+
+from abs_sync import save_methods
+from abs_sync.config import DEFAULT_CONNECTION_STRING
 from refresh_methods import update_from_dir_list, update_for_time, update_from_list, update
 
 
@@ -19,7 +21,7 @@ def f():
         return
 
     db_name = params[1]
-    cnn_str = config.dbs[db_name]
+    cnn_str = DEFAULT_CONNECTION_STRING
     db = save_methods.Db(cnn_str)
 
     if operation_name == 'push':
@@ -43,7 +45,8 @@ def f():
     elif operation_name == 'pull':
         print('pull ', params)
         params = params[1:]
-        cnn = oracle_connection.Db().connect(cnn_str)
+        cnn = OracleClient()
+        cnn.connect(cnn_str)
         objs = []
         if len(params) == 1:
             print("Обновим все файлы.")

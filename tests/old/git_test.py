@@ -58,7 +58,7 @@ class GitNewDatabaseTest(unittest.TestCase):
         if not select_tune_date_update(cnn):
             date_updated = create_tune_date_update(cnn)
 
-            git_dir = os.path.join(config.git_folder, cnn.dsn)
+            git_dir = os.path.join(FOLDER_FOR_DB_GIT_FOLDERS, cnn.dsn)
 
             branch_name = '%s_%s' % (db_name, date_updated.strftime('%d.%m.%Y_%H.%M'))  # %Y%m%d_%H%M%S
             repo = clone_or_open_repo(git_dir)
@@ -84,7 +84,7 @@ class GitNewDatabaseTest(unittest.TestCase):
             index.commit("my commit message", author=author, committer=committer)
 
     def test_update_git(self):
-        git_dir = os.path.join(config.git_folder, cnn.dsn)
+        git_dir = os.path.join(FOLDER_FOR_DB_GIT_FOLDERS, cnn.dsn)
         repo = clone_or_open_repo(git_dir)
         # checkout_branch(repo, )
 
@@ -106,14 +106,14 @@ class GitNewDatabaseTest(unittest.TestCase):
                                  '@mail')
                 msg = msg_template
             msg += ' %s.%s,' % (row['CLASS_ID'], row['SHORT_NAME'])
-            write_object_from_row(os.path.join(config.git_folder, cnn.dsn), row)
+            write_object_from_row(os.path.join(FOLDER_FOR_DB_GIT_FOLDERS, cnn.dsn), row)
             prev_user = current_user
         git_funcs.commit(repo, msg.rstrip(','), prev_user, (prev_user or '') + '@mail', 'sources_sync_job', '@mail')
 
         print(df)
 
     def test_update_git2(self):
-        git_dir = os.path.join(config.git_folder, cnn.dsn)
+        git_dir = os.path.join(FOLDER_FOR_DB_GIT_FOLDERS, cnn.dsn)
         repo = clone_or_open_repo(git_dir)
         if not select_tune_date_update(cnn):
             create_tune_date_update(cnn)
@@ -151,7 +151,7 @@ class GitNewDatabaseTest(unittest.TestCase):
                 logger.debug("commit")
                 commit_group(repo, group)
                 group = []
-            write_object_from_row(os.path.join(config.git_folder, cnn.dsn), row)
+            write_object_from_row(os.path.join(FOLDER_FOR_DB_GIT_FOLDERS, cnn.dsn), row)
             prev_user = current_user
             group.append(row)
         commit_group(repo, group)
@@ -161,7 +161,7 @@ class GitNewDatabaseTest(unittest.TestCase):
         print(None != None)
 
     def test_comit_by_date(self):
-        git_dir = os.path.join(config.git_folder, cnn.dsn)
+        git_dir = os.path.join(FOLDER_FOR_DB_GIT_FOLDERS, cnn.dsn)
         repo = clone_or_open_repo(git_dir)
         if not select_tune_date_update(cnn):
             create_tune_date_update(cnn)
@@ -183,7 +183,7 @@ class GitNewDatabaseTest(unittest.TestCase):
             if not last_date_update:
                 last_date_update = select_max_object_date_modified(cnn)["MODIFIED"][0] - datetime.timedelta(days=7)
 
-            repo = clone_or_open_repo(os.path.join(config.git_folder, cnn.dsn))
+            repo = clone_or_open_repo(os.path.join(FOLDER_FOR_DB_GIT_FOLDERS, cnn.dsn))
 
             if not select_tune_date_update(cnn):
                 logger.debug("update init_git_db")

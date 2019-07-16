@@ -1,9 +1,10 @@
 pandas
 cx_Oracle
-gitpython
+#gitpython
 schedule
 click
 pyhamcrest
 pytest
-
-git+ssh://git@gitlab.moduldev.ru/abs/database-client.git@dev
+pyyaml
+git+ssh://git@github.com/brizjin/GitPython.git
+git+ssh://git@gitlab.moduldev.ru/abs/database-client.git

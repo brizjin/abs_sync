@@ -5,7 +5,8 @@ import unittest
 import cx_Oracle as cx_Oracle
 import pandas as pd
 
-from abs_sync import config, dirs, git_funcs
+from abs_sync import dirs, git_funcs
+from abs_sync.config import FOLDER_FOR_DB_GIT_FOLDERS
 from abs_sync.selects import select_types_in_folder_or_date_modified, select_objects_in_folder_or_date_modified
 
 pd.options.display.width = 300
@@ -146,7 +147,7 @@ class DirsTest(unittest.TestCase):
         cnn = cx_Oracle.connect(db_cnn_str)
 
         # project_folder_path = r"C:\Users\BryzzhinIS\Documents\Хранилища\sync_script\dbs\day"
-        project_folder_path = os.path.join(config.git_folder, cnn.dsn)
+        project_folder_path = os.path.join(FOLDER_FOR_DB_GIT_FOLDERS, cnn.dsn)
         df = select_objects_in_folder_or_date_modified(cnn, project_folder_path, 1, 'd')
         dirs.write_object_from_df(df, project_folder_path)
 

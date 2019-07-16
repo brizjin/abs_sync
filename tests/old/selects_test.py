@@ -61,7 +61,7 @@ class SelectTest(unittest.TestCase):
         # print(df[df["TEXT"].map(lambda a: a.strip() != '')])
 
     def test_select_view_in_folder_or_date_modified(self):
-        folder_objects_df = dirs.objects_in_folder(os.path.join(config.git_folder, cnn.dsn))
+        folder_objects_df = dirs.objects_in_folder(os.path.join(FOLDER_FOR_DB_GIT_FOLDERS, cnn.dsn))
         print(select_types_in_folder_or_date_modified(cnn, 'VIEW', folder_objects_df, 1, 'd'))
 
     def test_select_trigger_in_folder_or_date_modified(self):
@@ -86,7 +86,7 @@ class SelectTest(unittest.TestCase):
         print(df)
 
     def test_select_objects_in_folder_or_date_modified_func(self):
-        folder_path = os.path.join(config.git_folder, cnn.dsn)
+        folder_path = os.path.join(FOLDER_FOR_DB_GIT_FOLDERS, cnn.dsn)
         df = select_objects_in_folder_or_date_modified(cnn, folder_path, 1, 'd')
 
         self.assertGreater(len(df), 0)

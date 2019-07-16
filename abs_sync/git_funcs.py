@@ -1,9 +1,9 @@
 import datetime
-import re
 
 from git import Repo, Actor
 
 # from abs_sync.config import git_ssh_cmd
+from abs_sync.config import GIT_URL, DAYS_UPDATE_ON_START
 from abs_sync.selects import *
 
 logger = logging.getLogger(__name__)
@@ -18,8 +18,8 @@ def clone_or_open_repo(git_dir, db_name='withoutdb'):
     # with Git().custom_environment(GIT_SSH_COMMAND=git_ssh_cmd):
     logger.debug('SSSSHHHH NEW')
     if not os.path.isdir(os.path.join(git_dir, '.git')):
-        db_logger.debug("clone repo %s to %s" % (config.git_url, git_dir))
-        repo = Repo.clone_from(config.git_url, git_dir)
+        db_logger.debug("clone repo %s to %s" % (GIT_URL, git_dir))
+        repo = Repo.clone_from(GIT_URL, git_dir)
     else:
         repo = Repo(git_dir)
         db_logger.debug("open repo %s is_dirty: %s" % (git_dir, repo.is_dirty()))
@@ -66,8 +66,7 @@ def commit(repo, msg, author_name, author_mail, commiter_name, commiter_mail):
 
 def tune_branch_name(cnn):
     date_updated = select_tune_date_update(cnn)
-    # return '%s_%s' % (cnn.dsn, date_updated.strftime('%d.%m.%Y_%H.%M'))
-    return '%s_%s' % (cnn.dsn, date_updated.strftime('%Y.%m.%d_%H.%M'))
+    return '%s_%s' % (cnn.connection.dsn, date_updated.strftime('%Y.%m.%d_%H.%M'))
 
 
 def commit_group(repo, group, db_name, days_delta):
@@ -106,7 +105,7 @@ def commit_by_dataframe(repo, df, db_name, days_delta):
         rows = []
         prev_len = 0
         for ids, row in df.iterrows():
-            dirs.write_object_from_row(os.path.join(config.git_folder, db_name), row)
+            dirs.write_object_from_row(os.path.join(FOLDER_FOR_DB_GIT_FOLDERS, db_name), row)
             current_len = len(repo.index.diff(None)) + len(repo.untracked_files)
             if prev_len != current_len:
                 prev_len = current_len
@@ -130,7 +129,7 @@ def commit_by_dataframe(repo, df, db_name, days_delta):
             elif prev_user != current_user:
                 commit_group(repo, group, db_name, days_delta)
                 group = []
-            dirs.write_object_from_row(os.path.join(config.git_folder, db_name), row)
+            dirs.write_object_from_row(os.path.join(FOLDER_FOR_DB_GIT_FOLDERS, db_name), row)
             prev_user = current_user
             # current_len = len(repo.index.diff(None)) + len(repo.untracked_files)
             # if prev_len != current_len:
@@ -192,55 +191,59 @@ def checkout_local_branch_and_reset_to_remote(repo, local_branch_name):
 
 
 def update(connection_string):
-    # global last_date_update
-    # df = None
-    m = re.match(r"(?P<user>.+)/(?P<pass>.+)@(?P<dbname>.+)", connection_string)
-    db_name = m.group('dbname')
-
-    cnn = dbs.get(connection_string)
-    if not cnn:
-        try:
-            cnn = cx_Oracle.connect(connection_string)
-            dbs[connection_string] = cnn
-        except cx_Oracle.DatabaseError as e:
-            error = e.args[0]
-            # print "Code:", error.code
-            # print "Message:", error.message
-            dbs[connection_string] = None
-            logger.exception(
-                "update exception on connection to database code=%s, message=%s" % (error.code, error.message))
-            return
+    # # global last_date_update
+    # # df = None
+    # m = re.match(r"(?P<user>.+)/(?P<pass>.+)@(?P<dbname>.+)", connection_string)
+    # db_name = m.group('dbname')
+    #
+    # cnn = dbs.get(connection_string)
+    # if not cnn:
+    #     try:
+    #         cnn = cx_Oracle.connect(connection_string)
+    #         dbs[connection_string] = cnn
+    #     except cx_Oracle.DatabaseError as e:
+    #         error = e.args[0]
+    #         # print "Code:", error.code
+    #         # print "Message:", error.message
+    #         dbs[connection_string] = None
+    #         logger.exception(
+    #             "update exception on connection to database code=%s, message=%s" % (error.code, error.message))
+    #         return
 
     try:
-        last_date_update = last_dates_update.get(db_name)
+        cnn = OracleClient()
+        cnn.connect(connection_string)
+        dsn = cnn.connection.dsn
+        logger.debug(f"dsn={dsn}")
+    except Exception:
+        logger.exception(f"connection_string={connection_string}")
+        return
+
+    try:
+        last_date_update = last_dates_update.get(dsn)
         sysdate = select_sysdate(cnn)
         # кол-во дней на которые на сервере передвинули время
         # корректируем дату коммитов на эту дельту
-        days_delta = datetime.timedelta(days=(
-                datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - sysdate.replace(hour=0,
-                                                                                                             minute=0,
-                                                                                                             second=0,
-                                                                                                             microsecond=0)).days)
+        today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        db_today = sysdate.replace(hour=0, minute=0, second=0, microsecond=0)
+        days_delta = datetime.timedelta(days=(today - db_today).days)
         if not last_date_update:
-            logger.debug("delta_days=%s, datetime.datetime.now()=%s, sysdate=%s" % (
-                days_delta, datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0),
-                sysdate.replace(hour=0, minute=0, second=0, microsecond=0)))
-            last_date_update = sysdate - datetime.timedelta(days=config.days_update_on_start)
+            logger.debug("delta_days=%s, datetime.datetime.now()=%s, sysdate=%s" % (days_delta, today, db_today))
+            last_date_update = sysdate - datetime.timedelta(days=DAYS_UPDATE_ON_START)
             logger.debug("last_date_update is null set it to %s" % last_date_update)
             # залогируем список пользователей за последний месяц правивших методы
             # чтобы можно было найти тех по кому мы не сохраняем изменения
-            # logger.debug(",\n".join(["'%s'" % a for a in select_users(cnn)['USER_MODIFIED']]))
 
         # with Git().custom_environment(GIT_SSH_COMMAND=git_ssh_cmd):
-        repo = clone_or_open_repo(os.path.join(config.git_folder, db_name), db_name)
+        repo = clone_or_open_repo(os.path.join(FOLDER_FOR_DB_GIT_FOLDERS, dsn), dsn)
 
         if not select_tune_date_update(cnn):
             logger.debug("update init_git_db")
             create_tune_date_update(cnn)
             df = select_objects_in_folder_or_date_modified(cnn, last_date_update.strftime('%d.%m.%Y %H:%M:%S'))
         else:
-            logger.debug("select object on date %s" % last_date_update.strftime('%d.%m.%Y %H:%M:%S'))
-            df = select_all_by_date_modified(cnn, last_date_update.strftime('%d.%m.%Y %H:%M:%S'))
+            logger.debug(f"select object on_date: {last_date_update.strftime('%d.%m.%Y %H:%M:%S')}")
+            df = select_all_by_date_modified(cnn, last_date_update)
         if len(df) > 0:
 
             branch_name = tune_branch_name(cnn)
@@ -251,7 +254,7 @@ def update(connection_string):
                     repo.remotes['origin'].fetch(refspec='{}'.format(branch_name))
                     repo.head.reset(commit=repo.refs[remote_branch_name], index=True, working_tree=True)
                 except Exception:
-                    logger.exception("exceprion checkout and reset %s %s" % (branch_name, traceback.format_exc()))
+                    logger.exception(f"exceprion checkout and reset. branch_name={branch_name}")
             else:
                 try:
                     repo.heads['master'].checkout()
@@ -261,24 +264,16 @@ def update(connection_string):
                     repo.remotes['origin'].fetch(refspec='{}'.format('master'))
                     repo.head.reset(commit=repo.refs['origin/master'], index=True, working_tree=True)
                 except Exception:
-                    logger.exception("exceprion checkout and reset master %s" % traceback.format_exc())
+                    logger.exception(f"if branch does not exists, exceprion checkout and reset")
                 repo.create_head(branch_name, 'master').checkout()
 
-            # try:
-            #     if repo.refs[remote_branch_name].tracking_branch():
-            #         repo.remotes['origin'].fetch(refspec='{}'.format(branch_name))
-            #         # repo.remotes['origin'].fetch(refspec='{}'.format(branch_name))
-            #         repo.head.reset(commit=repo.refs[remote_branch_name], index=True, working_tree=True)
-            # except IndexError:
-            #     pass
-
-            commit_by_dataframe(repo, df, db_name, days_delta)
+            commit_by_dataframe(repo, df, dsn, days_delta)
             # repo.remotes['origin'].push(refspec='{}:refs/heads/autosave/{}'.format(branch_name, branch_name))
             repo.remotes['origin'].push(refspec='{}:{}'.format(branch_name, branch_name))
         else:
             logger.debug("up-to-date")
 
-        last_dates_update[db_name] = sysdate
+        last_dates_update[dsn] = sysdate
         logger.info("updated finish")
 
     except cx_Oracle.DatabaseError as e:
@@ -291,4 +286,4 @@ def update(connection_string):
         else:
             logger.exception("update db exception code=%s, message=%s" % (error.code, error.message))
     except Exception:
-        logger.exception("update exception %s" % traceback.format_exc())
+        logger.exception("update exception ")

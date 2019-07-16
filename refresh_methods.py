@@ -1,21 +1,15 @@
 import os
 import re
-# import importlib.util
-#
 import sys
 
 import cx_Oracle
+from database_client.oracle import OracleClient
 from git import Repo
 
-from abs_sync import config
-import oracle_connection
+from abs_sync.config import WORKING_GIT_FOLDER
+from abs_sync.sql import read_method_sources
 
-os.environ["ORACLE_HOME"] = "C:/app/BryzzhinIS/product/11.2.0/client_1/"
-os.environ['NLS_LANG'] = '.AL32UTF8'
-
-# prj_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 sync_script_dir = os.path.dirname(os.path.realpath(__file__))
-
 
 
 # os.chdir(prj_dir)
@@ -44,7 +38,7 @@ def write_part(part, name):
 
 
 def write_method_text(props):
-    file_name = os.path.join(config.texts_working_dir, props["class_name"], props["method_name"])
+    file_name = os.path.join(WORKING_GIT_FOLDER, props["class_name"], props["method_name"])
     write_part(props["e"], file_name + ".body.sql")
     write_part(props["v"], file_name + ".validate.sql")
     write_part(props["g"], file_name + ".globals.sql")
@@ -52,18 +46,18 @@ def write_method_text(props):
     write_part(props["s"], file_name + ".script.sql")
 
 
-method_sources_tst = read_tst(os.path.join(sync_script_dir, "sql", "method_sources.tst"))
+# method_sources_tst = read_tst(os.path.join(sync_script_dir, "sql", "method_sources.tst"))
 
 
 def update_method(cnn, class_name, method_name):
-    r = cnn.execute_plsql(method_sources_tst, **dict(class_name=class_name, method_name=method_name, e=cx_Oracle.CLOB,
-                                                     v=cx_Oracle.CLOB, g=cx_Oracle.CLOB,
-                                                     l=cx_Oracle.CLOB, s=cx_Oracle.CLOB))
+    r = cnn.execute_plsql(read_method_sources, **dict(class_name=class_name, method_name=method_name, e=cx_Oracle.CLOB,
+                                                      v=cx_Oracle.CLOB, g=cx_Oracle.CLOB,
+                                                      l=cx_Oracle.CLOB, s=cx_Oracle.CLOB))
     write_method_text(r)
 
 
 def update_class(cnn, class_name):
-    brk_msg_dir = os.path.join(config.texts_working_dir, class_name)
+    brk_msg_dir = os.path.join(WORKING_GIT_FOLDER, class_name)
     methods = set([f.split(".")[0] for f in os.listdir(brk_msg_dir) if os.path.isfile(os.path.join(brk_msg_dir, f))])
     for m in methods:
         update_method(cnn, class_name, m)
@@ -79,7 +73,7 @@ def update_creteria(cnn, class_name, creteria_name):
     # print(s["CONDITION"][0])
     # print(s["ORDER_BY"][0])
     # print(s["GROUP_BY"][0])
-    file_name = os.path.join(config.texts_working_dir, class_name, creteria_name)
+    file_name = os.path.join(WORKING_GIT_FOLDER, class_name, creteria_name)
     write_part(s["CONDITION"][0] + s["ORDER_BY"][0] + s["GROUP_BY"][0], file_name + ".sql")
 
 
@@ -95,7 +89,7 @@ def update_trigger(cnn, trigger_name):
                   :trigger_body := 'CREATE OR REPLACE TRIGGER ' || d || c;
                 end;""", **dict(trigger_name=trigger_name, trigger_body=cx_Oracle.CLOB, table_name=cx_Oracle.NCHAR))
     class_name = r["table_name"].split('#')[1]
-    file_name = os.path.join(config.texts_working_dir, class_name, trigger_name)
+    file_name = os.path.join(WORKING_GIT_FOLDER, class_name, trigger_name)
     write_part(r["trigger_body"], file_name + ".trg.sql")
 
 
@@ -131,7 +125,7 @@ def git_commit(repo):
     # repo.git.add(update=True)
     repo.git.add(all=True)
     # modified_files = [os.path.join(config.texts_working_dir, m.a_path) for m in repo.index.diff(None)]
-    staged_files = [os.path.join(config.texts_working_dir, s.a_path) for s in repo.index.diff("HEAD")]
+    staged_files = [os.path.join(WORKING_GIT_FOLDER, s.a_path) for s in repo.index.diff("HEAD")]
     # untrack_files = [os.path.join(config.texts_working_dir, u) for u in repo.untracked_files]
     # s = sorted(modified_files + staged_files + untrack_files)
     s = sorted(staged_files)
@@ -170,7 +164,7 @@ def update_for_time(cnn, num, interval_name):
     #     update(cnn, row["type"], row["class_id"], row["short_name"], p)
 
 
-def update_from_dir_list(cnn, dir_path=config.texts_working_dir):
+def update_from_dir_list(cnn, dir_path=WORKING_GIT_FOLDER):
     folders = [f for f in os.listdir(dir_path) if not os.path.isfile(os.path.join(dir_path, f))]
     folders = [f for f in folders if f not in ['.git', '.idea', '.sync', 'PLSQL', 'TESTS']]
     files = [(f, set([file.split(".")[0] for file in os.listdir(os.path.join(dir_path, f))
@@ -216,11 +210,12 @@ def update_from_list(cnn, o):
 # @click.option('--name', prompt='Your name', help='The person to greet.')
 def updater(db, t, p, u, o, b):
     # db = 'day'
-    cnn = oracle_connection.Db().connect("ibs/HtuRhtl@%s" % db)
+    cnn = OracleClient()
+    cnn.connect("ibs/HtuRhtl@%s" % db)
     repo = None
     prev_branch = None
     if b and not p:
-        repo = Repo(config.texts_working_dir)
+        repo = Repo(WORKING_GIT_FOLDER)
         prev_branch = repo.active_branch.name
         if git_checkout(repo, db):
             print("Чтобы использовать флаг -b сначала закомментируйте изменения")
@@ -245,7 +240,8 @@ if __name__ == '__main__':
         if len(params) == 0:
             raise Exception("Необходимо указать имя базы данных")
         db_name = params[0]
-        cnn = oracle_connection.Db().connect("ibs/HtuRhtl@%s" % db_name)
+        cnn = OracleClient()
+        cnn.connect("ibs/HtuRhtl@%s" % db_name)
         c = "-c" in flags  # коммитить
         p = "-p" in flags  # только вывод на экран
         objs = None
@@ -266,7 +262,7 @@ if __name__ == '__main__':
         prev_branch = None
         repo = None
         if not p:
-            repo = Repo(config.texts_working_dir)
+            repo = Repo(WORKING_GIT_FOLDER)
             if git_staged_files(repo):
                 print("В рабочем каталоге имеются не зафиксированные изменения")
                 return

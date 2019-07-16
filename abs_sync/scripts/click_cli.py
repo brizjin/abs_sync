@@ -1,15 +1,12 @@
 import re
 import time
-from cx_Oracle import Connection
 
 import click
-import cx_Oracle
-import pandas as pd
 import schedule
 
-from abs_sync import config, save_methods, git_funcs, log
+from abs_sync import save_methods, git_funcs, log, config
 # from refresh_methods import update
-from abs_sync.config import read_parameters, write_parameters, default_parameters
+# from abs_sync.client_config import read_parameters, write_parameters, default_parameters
 from abs_sync.save_methods import pull_all_objects, pull_last_objects, Db
 
 
@@ -42,7 +39,7 @@ def cli(ctx):
 
 @cli.command(name="tns", help="Вывести на экран TNS по-умолчанию")
 def tns():
-    print_cfg(config.dbs)
+    print_cfg(config.TNS)
 
 
 @cli.command(name="sync", help='!!Не использовать')
@@ -87,31 +84,6 @@ def print_cfg(cfg):
         click.echo("%-{0}s = %s".format(ml) % (k.upper(), v))
 
 
-@env.command(name='print')
-def env_print():
-    """Вывести на экран текущие настройки"""
-    print_cfg(read_parameters())
-
-
-@env.command(name='set')
-@click.argument('params', nargs=-1)
-def env_set(params):
-    """Установить параметры"""
-    cfg = read_parameters()
-    for p in params:
-        key, value = p.split('=')
-        cfg[key.lower()] = value
-    write_parameters(cfg)
-    print_cfg(read_parameters())
-
-
-@env.command(name='reset')
-def env_reset():
-    """Сбросить параметры значениями по-умолчанию"""
-    write_parameters(default_parameters())
-    print_cfg(read_parameters())
-
-
 # @cli.command()
 # @click.option('--a', 'mode', flag_value='all', default=True, help="""Получить все элементы по списку файлов с диска""")
 # @click.option('-t', 'mode', flag_value='time', default=True, help="""Получить недавно обновленные элементы.
@@ -152,7 +124,7 @@ def pull_all(ctx, db):
     """Получает все изменения по всем операциям/вьюхам/тригирам, что лежат в гите"""
     cfg = read_parameters()
     db = db if db else cfg['db']
-    cnn = Db(config.dbs[db])
+    cnn = Db(config.TNS[db])
     click.echo('Подключаемся к базе %s' % cnn.select_sid())
 
     df2 = pull_all_objects(cnn)
@@ -172,7 +144,7 @@ def pull_time(ctx, count, unit, db):
 
     cfg = read_parameters()
     db = db if db else cfg['db']
-    cnn = Db(config.dbs[db])
+    cnn = Db(config.TNS[db])
     click.echo('Подключаемся к базе %s' % cnn.select_sid())
 
     if count is None:
@@ -226,7 +198,7 @@ def push():
 def list(db, list):
     cfg = read_parameters()
     db = db if db else cfg['db']
-    cnn = Db(config.dbs[db])
+    cnn = Db(config.TNS[db])
     click.echo('Подключаемся к базе %s' % cnn.select_sid())
 
     click.echo(list)
