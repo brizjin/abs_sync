@@ -1,10 +1,6 @@
+import datetime
 import unittest
 
-import datetime
-
-import cx_Oracle as cx_Oracle
-
-from abs_sync import log
 from abs_sync.selects import *
 
 os.environ["ORACLE_HOME"] = "C:/app/BryzzhinIS/product/11.2.0/client_1/"
@@ -12,7 +8,7 @@ os.environ['NLS_LANG'] = '.AL32UTF8'
 db_cnn_str = "ibs/HtuRhtl@midabs"
 cnn = cx_Oracle.connect(db_cnn_str)
 
-logger = log.log_init("root")
+logger = logging.getLogger(__name__)
 
 
 class SelectTest(unittest.TestCase):
@@ -148,7 +144,7 @@ class SelectTest(unittest.TestCase):
         # df = select_all_by_date_modified(cnn, last_date_update)
         db_cnn_str = "ibs/HtuRhtl@lw-abs-abs"
         cnn = cx_Oracle.connect(db_cnn_str)
-        #df = select(cnn, "select sysdate from dual").iloc[0]['SYSDATE']
+        # df = select(cnn, "select sysdate from dual").iloc[0]['SYSDATE']
         sysdate = select_sysdate(cnn)
         print(datetime.timedelta(days=(datetime.datetime.now() - sysdate).days))
         print(sysdate)

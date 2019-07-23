@@ -47,7 +47,7 @@ USERS_TO_SAVE_OBJECTS_IN_GIT = []
 TESTS_FOLDER = os.path.dirname(__file__)
 PROJECT_ROOT_FOLDER = os.path.dirname(os.path.realpath(os.path.join(__file__, '..')))
 CONFIG_FILE_NAME = os.path.join(PROJECT_ROOT_FOLDER, "config.yml")
-LOG_FOLDER = os.path.join(PROJECT_ROOT_FOLDER, "log")
+LOG_FOLDER = os.path.join(PROJECT_ROOT_FOLDER, "logs")
 FOLDER_FOR_DB_GIT_FOLDERS = os.path.join(PROJECT_ROOT_FOLDER, 'dbs')
 
 config = load_config(CONFIG_FILE_NAME)

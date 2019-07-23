@@ -20,3 +20,4 @@ logs/
 /abs2.egg-info/*
 /abs.egg-info/*
 /dbs_plplus_texts/
+/config.yml

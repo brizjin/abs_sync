@@ -2,6 +2,7 @@ import logging
 import os
 
 import cx_Oracle
+import database_client
 import pandas as pd
 from database_client.jinja import render
 from database_client.oracle import OracleClient
@@ -25,64 +26,80 @@ abs_users_sql = """
         )
     order by regexp_replace(USER_ID,'.*\.(.*)','\1')"""
 
-methods_sql = """
-    WITH types AS (SELECT 'EXECUTE' type, 'body' EXT FROM dual
-       UNION SELECT 'VALIDATE', 'validate' FROM dual
-       UNION SELECT 'VBSCRIPT', 'script' FROM dual
-       UNION SELECT 'PUBLIC', 'globals' FROM dual
-       UNION SELECT 'PRIVATE', 'locals' FROM dual)
-    SELECT m.class_id
-      , m.short_name
-      , m.modified
-      , m.user_modified
-      ,CURSOR(SELECT s.text FROM sources s WHERE s.name = m.id AND s.type = t.type ORDER BY s.line) TEXT
-      ,t.EXT EXTENTION
-    FROM methods m
-    CROSS JOIN types t
-    WHERE greatest(m.modified, coalesce(
-        (SELECT max(dm.TIME)
-         FROM DIARY_METHODS dm
-         WHERE dm.method_id = m.id), m.modified)) BETWEEN {{on_date|sqlvar}} and sysdate
-      and m.modified >= sysdate - {{days_modified|sqlvar}}
-      and upper(m.user_modified) in {{users| sqlvar}}"""
 
-triggers_sql = """
-    select * from (
-        SELECT substr(tr.table_name,instr(tr.table_name,'#')+1) CLASS_ID
-            , tr.TRIGGER_NAME SHORT_NAME
-            , to_date(obj.TIMESTAMP, 'yyyy-mm-dd:hh24:mi:ss') MODIFIED
-            , '' USER_MODIFIED
-            , 'CREATE OR REPLACE TRIGGER ' || tr.description HEADER
-            , tr.trigger_body TEXT
-            , 'trg' EXTENTION
-        FROM all_triggers tr
-        INNER JOIN user_objects obj ON obj.OBJECT_NAME = tr.TRIGGER_NAME
-        WHERE to_date(obj.TIMESTAMP, 'yyyy-mm-dd:hh24:mi:ss') BETWEEN {{on_date|sqlvar}} AND sysdate
-        --where tr.trigger_name = 'BKB_DEL_MAIN_DOCUM'
-          AND obj.OBJECT_TYPE = 'TRIGGER'
-    ) where 1=1
-    """
+def methods_sql(on_date):
+    text = """
+        WITH types AS (SELECT 'EXECUTE' type, 'body' EXT FROM dual
+           UNION SELECT 'VALIDATE', 'validate' FROM dual
+           UNION SELECT 'VBSCRIPT', 'script' FROM dual
+           UNION SELECT 'PUBLIC', 'globals' FROM dual
+           UNION SELECT 'PRIVATE', 'locals' FROM dual)
+        SELECT m.class_id
+          , m.short_name
+          , m.modified
+          , m.user_modified
+          ,CURSOR(SELECT s.text FROM sources s WHERE s.name = m.id AND s.type = t.type ORDER BY s.line) TEXT
+          ,t.EXT EXTENTION
+        FROM methods m
+        CROSS JOIN types t
+        WHERE greatest(m.modified, coalesce(
+            (SELECT max(dm.TIME)
+             FROM DIARY_METHODS dm
+             WHERE dm.method_id = m.id), m.modified)) BETWEEN {{on_date|sqlvar}} and sysdate
+          and m.modified >= sysdate - {{days_modified|sqlvar}}
+          and upper(m.user_modified) in {{users| sqlvar}}"""
+    users_list = USERS_TO_SAVE_OBJECTS_IN_GIT
+    days_count = DAYS_WHEN_OBJECT_MODIFIED_UPDATE_FROM_ACTION
+    return render(text, on_date=on_date, users=users_list, days_modified=days_count)
 
-creteria_sql = """
-    select * from (
-        SELECT cr.class_id
-            , cr.short_name
-            , cr.MODIFIED
-            , coalesce(    (SELECT max(d.TIME) FROM DIARY_CRITERIA d WHERE d.criteria_id = cr.id),cr.MODIFIED) ACTION_DATE
-            , regexp_replace((SELECT d.USER_ID FROM DIARY_CRITERIA d
-                              WHERE d.criteria_id = cr.id AND d.ACTION IN ('INSERTED','UPDATED')
-                                AND d.TIME = (SELECT max(d.TIME) FROM DIARY_CRITERIA d
-                                              WHERE d.criteria_id = cr.id
-                                                AND d.ACTION IN ('INSERTED','UPDATED'))),'.*\.(.*)','\1') USER_MODIFIED
-            , cr.condition
-            , cr.order_by
-            , cr.group_by
-            , '' EXTENTION
-        FROM criteria cr
-        WHERE cr.modified >= sysdate - {{days_modified|sqlvar}}
-    ) cr
-    where greatest(cr.MODIFIED, cr.ACTION_DATE) BETWEEN {{on_date|sqlvar}} and sysdate
-      and upper(cr.user_modified) in {{users|sqlvar}}"""
+
+def triggers_sql(on_date):
+    text = """
+        select * from (
+            SELECT substr(tr.table_name,instr(tr.table_name,'#')+1) CLASS_ID
+                , tr.TRIGGER_NAME SHORT_NAME
+                , to_date(obj.TIMESTAMP, 'yyyy-mm-dd:hh24:mi:ss') MODIFIED
+                , '' USER_MODIFIED
+                , 'CREATE OR REPLACE TRIGGER ' || tr.description HEADER
+                , tr.trigger_body TEXT
+                , 'trg' EXTENTION
+            FROM all_triggers tr
+            INNER JOIN user_objects obj ON obj.OBJECT_NAME = tr.TRIGGER_NAME
+            WHERE to_date(obj.TIMESTAMP, 'yyyy-mm-dd:hh24:mi:ss') BETWEEN {{on_date|sqlvar}} AND sysdate
+            --where tr.trigger_name = 'BKB_DEL_MAIN_DOCUM'
+              AND obj.OBJECT_TYPE = 'TRIGGER'
+        ) where 1=1
+        """
+    users_list = USERS_TO_SAVE_OBJECTS_IN_GIT
+    days_count = DAYS_WHEN_OBJECT_MODIFIED_UPDATE_FROM_ACTION
+    return render(text, on_date=on_date, users=users_list, days_modified=days_count)
+
+
+def creteria_sql(on_date):
+    text = """
+        select * from (
+            SELECT cr.class_id
+                , cr.short_name
+                , cr.MODIFIED
+                , coalesce(    (SELECT max(d.TIME) FROM DIARY_CRITERIA d WHERE d.criteria_id = cr.id),cr.MODIFIED) ACTION_DATE
+                , regexp_replace((SELECT d.USER_ID FROM DIARY_CRITERIA d
+                                  WHERE d.criteria_id = cr.id AND d.ACTION IN ('INSERTED','UPDATED')
+                                    AND d.TIME = (SELECT max(d.TIME) FROM DIARY_CRITERIA d
+                                                  WHERE d.criteria_id = cr.id
+                                                    AND d.ACTION IN ('INSERTED','UPDATED'))),'.*\.(.*)','\1') USER_MODIFIED
+                , cr.condition
+                , cr.order_by
+                , cr.group_by
+                , '' EXTENTION
+            FROM criteria cr
+            WHERE cr.modified >= sysdate - {{days_modified|sqlvar}}
+        ) cr
+        where greatest(cr.MODIFIED, cr.ACTION_DATE) BETWEEN {{on_date|sqlvar}} and sysdate
+          and upper(cr.user_modified) in {{users|sqlvar}}"""
+    users_list = USERS_TO_SAVE_OBJECTS_IN_GIT
+    days_count = DAYS_WHEN_OBJECT_MODIFIED_UPDATE_FROM_ACTION
+    return render(text, on_date=on_date, users=users_list, days_modified=days_count)
+
 
 texts_sql = {'METHOD': methods_sql, 'VIEW': creteria_sql, 'TRIGGER': triggers_sql}
 interval = {'d': 'day', 'h': 'hour', 'm': 'minute', 's': 'second'}
@@ -93,7 +110,7 @@ def cursor_reader(cursor):
 
 
 def norm_object(df, type):
-    logger.debug(f"type={type}")
+    # logger.debug(f"type={type}")
     if type == 'VIEW':
         df["TEXT"] = df["CONDITION"].map(nstr) + df["ORDER_BY"].map(nstr) + df["GROUP_BY"].map(nstr)
         df = df.drop(["CONDITION", "ORDER_BY", "GROUP_BY"], axis=1)
@@ -107,11 +124,18 @@ def norm_object(df, type):
 
 
 def select_by_date_modified(cnn, object_type, last_date_update):
-    text = render(texts_sql[object_type], on_date=last_date_update, users=USERS_TO_SAVE_OBJECTS_IN_GIT,
-                  days_modified=DAYS_WHEN_OBJECT_MODIFIED_UPDATE_FROM_ACTION)
+    text = texts_sql[object_type](on_date=last_date_update)
     logger.debug("before select")
-    df = norm_object(cnn.select(text), object_type)
-    logger.debug("after select")
+    df_list = []
+    for row_df in cnn.select_gn(text):
+        df_list.append(norm_object(row_df, object_type))
+    # df = norm_object(df, object_type)
+    # logger.debug(f"df_list={df_list}")
+    if len(df_list) > 0:
+        df_list = pd.concat(df_list)
+
+    df = pd.DataFrame(df_list)
+    # logger.debug(f"after select:{df}")
     return df
 
 
@@ -125,13 +149,13 @@ def select_types_in_folder_or_date_modified(cnn, object_type, folder_objects, up
     group = objs.groupby(["CLASS_ID"])
     condition = "CLASS_ID = '%s' and SHORT_NAME in (%s)"
     where_by_name = "\n or ".join(condition % (class_id, ",".join(rows["SHORT_NAME"])) for class_id, rows in group)
-    sql = texts_sql[object_type] % update_from_date + "\n or %s" % where_by_name
+    sql = texts_sql[object_type](on_date=update_from_date) + "\n or %s" % where_by_name
     df = norm_object(cnn.select(sql), object_type)
     return df
 
 
-def select_objects_in_folder_or_date_modified(cnn, update_from_date):
-    git_dir = os.path.join(FOLDER_FOR_DB_GIT_FOLDERS, cnn.dsn)
+def select_objects_in_folder_or_date_modified(cnn: OracleClient, update_from_date):
+    git_dir = os.path.join(FOLDER_FOR_DB_GIT_FOLDERS, cnn.connection.dsn)
     folder_objects_df = dirs.objects_in_folder(git_dir)
     s = select_types_in_folder_or_date_modified
     df = pd.concat([s(cnn, t, folder_objects_df, update_from_date) for t in texts_sql.keys()])
@@ -147,7 +171,7 @@ def select_tune_date_update(cnn):
     return tune
 
 
-def create_tune_date_update(cnn):
+def create_tune_date_update(cnn: database_client.oracle.OracleClient):
     logger.debug("Create tune")
     sql = u"""
         declare
@@ -185,11 +209,8 @@ def create_tune_date_update(cnn):
             commit;
             rtl.close(i);
         end;"""
-    cursor = cnn.cursor()
-    date_value = cursor.var(cx_Oracle.DATETIME)  # http://cx-oracle.readthedocs.io/en/latest/module.html
-    cursor.execute(sql, date_value=date_value)
-    date_value = date_value.getvalue()
-    cursor.close()
+    date_value = cnn.execute_plsql(sql, date_value=cx_Oracle.TIMESTAMP).get('date_value')
+
     logger.debug("Tune created with value=%s" % date_value)
     return date_value
 

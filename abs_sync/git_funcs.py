@@ -266,6 +266,12 @@ def update(connection_string):
                 except Exception:
                     logger.exception(f"if branch does not exists, exceprion checkout and reset")
                 repo.create_head(branch_name, 'master').checkout()
+                try:
+                    remote_branch_name = 'origin/%s' % branch_name
+                    repo.remotes['origin'].fetch(refspec='{}'.format(branch_name))
+                    repo.head.reset(commit=repo.refs[remote_branch_name], index=True, working_tree=True)
+                except Exception:
+                    logger.exception(f"2exceprion checkout and reset. branch_name={branch_name}")
 
             commit_by_dataframe(repo, df, dsn, days_delta)
             # repo.remotes['origin'].push(refspec='{}:refs/heads/autosave/{}'.format(branch_name, branch_name))
