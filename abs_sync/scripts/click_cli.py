@@ -57,14 +57,6 @@ def sync(s):
             git_funcs.update(connection_string)
 
         dbs = ["day", "mideveryday", "msb", "lw-ass-abs", "lw-abs-abs", "lw-p2-abs", "midabs", "mid-abs-ssd", "abs"]
-        # do_schedule("ibs/HtuRhtl@day")
-        # do_schedule("ibs/HtuRhtl@mideveryday")
-        # do_schedule("ibs/HtuRhtl@msb")
-        # do_schedule("ibs/HtuRhtl@lw-ass-abs")
-        # do_schedule("ibs/HtuRhtl@lw-abs-abs")
-        # do_schedule("ibs/HtuRhtl@lw-p2-abs")
-        # do_schedule("ibs/HtuRhtl@midabs")
-        # do_schedule("ibs/HtuRhtl@ssd")
         for db_name in dbs:
             do_schedule("ibs/HtuRhtl@%s" % db_name)
         while True:
