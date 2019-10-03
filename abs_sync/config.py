@@ -35,8 +35,13 @@ def read_parameters():
 
 
 # git_url = "http://git.brc.local:3000/ivan.bryzzhin/abs.git"
-git_url = "https://gitlab.moduldev.ru/abs/plplus.git"
-git_folder = "C:/Users/BryzzhinIS/Documents/Хранилища/sync_script/dbs"
+git_url = "https://BryzzhinIS:02Ghjdf;fk02@gitlab.moduldev.ru/abs/plplus.git"
+# git_url = "git@gitlab.moduldev.ru:abs/plplus.git"
+# git_folder = "C:/Users/BryzzhinIS/Documents/Хранилища/sync_script/dbs"
+git_folder = "/tmp/dbs"
+os.environ['GIT_USERNAME'] = 'BryzzhinIS'
+os.environ['GIT_PASSWORD'] = '02Ghjdf;fk02'
+
 # git_ssh_identity_file = os.path.expanduser('~/.ssh/id_rsa')
 # logger.debug()
 # git_ssh_cmd = 'ssh -i %s' % git_ssh_identity_file

@@ -63,8 +63,8 @@ def commit(repo, msg, author_name, author_mail, commiter_name, commiter_mail):
 
 def tune_branch_name(cnn):
     date_updated = select_tune_date_update(cnn)
-    # return '%s_%s' % (cnn.dsn, date_updated.strftime('%d.%m.%Y_%H.%M'))
-    return '%s_%s' % (cnn.dsn, date_updated.strftime('%Y.%m.%d_%H.%M'))
+    sid_name = select(cnn, "select sys_context('userenv','instance_name') SID from dual").iloc[0].SID
+    return '%s_%s' % (sid_name, date_updated.strftime('%Y.%m.%d_%H.%M'))
 
 
 def commit_group(repo, group, db_name, days_delta):
@@ -180,25 +180,28 @@ dbs = {}
 def update(connection_string):
     # global last_date_update
     # df = None
-    m = re.match(r"(?P<user>.+)/(?P<pass>.+)@(?P<dbname>.+)", connection_string)
-    db_name = m.group('dbname')
-
-    db_logger = logging.getLogger(db_name)
-    db_logger.debug("update %s" % db_name)
-
-    cnn = dbs.get(connection_string)
-    if not cnn:
-        try:
-            cnn = cx_Oracle.connect(connection_string)
-            dbs[connection_string] = cnn
-        except cx_Oracle.DatabaseError as e:
-            error = e.args[0]
-            # print "Code:", error.code
-            # print "Message:", error.message
-            dbs[connection_string] = None
-            db_logger.exception(
-                "update exception on connection to database code=%s, message=%s" % (error.code, error.message))
-            return
+    # m = re.match(r"(?P<user>.+)/(?P<pass>.+)@(?P<dbname>.+)", connection_string)
+    # db_name = m.group('dbname')
+    #
+    # db_logger = logging.getLogger(db_name)
+    # db_logger.debug("update %s" % db_name)
+    #
+    # cnn = dbs.get(connection_string)
+    # if not cnn:
+    try:
+        cnn = cx_Oracle.connect(connection_string)
+        df = select(cnn, "select sys_context('userenv','instance_name') SID from dual")
+        db_name = df.iloc[0].SID
+        db_logger = logging.getLogger(db_name)
+        logging.basicConfig(level=logging.DEBUG,
+                            format='%(asctime)s [%(name)s:%(lineno)s] [%(levelname)s] [%(processName)s,%(threadName)s] %(funcName)s - %(message)s')
+        # dbs[connection_string] = cnn
+    except cx_Oracle.DatabaseError as e:
+        error = e.args[0]
+        db_logger = logging.getLogger(connection_string)
+        dbs[connection_string] = None
+        db_logger.exception(connection_string)
+        return
 
     try:
         last_date_update = last_dates_update.get(db_name)

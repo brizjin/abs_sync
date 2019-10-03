@@ -9,7 +9,7 @@ import schedule
 
 from abs_sync import config, save_methods, git_funcs, log
 # from refresh_methods import update
-from abs_sync.config import read_parameters, write_parameters, default_parameters
+from abs_sync.config import read_parameters, write_parameters, default_parameters, dbs
 from abs_sync.save_methods import pull_all_objects, pull_last_objects, Db
 
 
@@ -59,7 +59,7 @@ def sync(s):
             schedule.every(1).hours.do(git_funcs.update, connection_string)
             git_funcs.update(connection_string)
 
-        dbs = ["day", "mideveryday", "msb", "lw-ass-abs", "lw-abs-abs", "lw-p2-abs", "midabs", "mid-abs-ssd"]
+        # dbs = ["day", "mideveryday", "msb", "lw-ass-abs", "lw-abs-abs", "lw-p2-abs", "midabs", "mid-abs-ssd"]
         # do_schedule("ibs/HtuRhtl@day")
         # do_schedule("ibs/HtuRhtl@mideveryday")
         # do_schedule("ibs/HtuRhtl@msb")
@@ -68,8 +68,8 @@ def sync(s):
         # do_schedule("ibs/HtuRhtl@lw-p2-abs")
         # do_schedule("ibs/HtuRhtl@midabs")
         # do_schedule("ibs/HtuRhtl@ssd")
-        for db_name in dbs:
-            do_schedule("ibs/HtuRhtl@%s" % db_name)
+        for connection_string in dbs.values():
+            do_schedule(connection_string)
         while True:
             schedule.run_pending()
             time.sleep(1)
