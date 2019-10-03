@@ -3,4 +3,5 @@ cx_Oracle
 gitpython
 schedule
 click
+pytest
 #git+https://github.com/brcportal2/python-oracle-client@dev
