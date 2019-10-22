@@ -1,6 +1,7 @@
 FROM abs/python-oracle:latest
 
 ADD requirements.txt /tmp/
+ADD ./ /root/prj
 
 RUN pip install -r /tmp/requirements.txt
 
@@ -13,3 +14,5 @@ RUN chmod 600 /root/.ssh/id_rsa
 #COPY docker-entrypoint.sh /bin/docker-entrypoint.sh
 #RUN chmod +x /bin/docker-entrypoint.sh
 #ENTRYPOINT ["/bin/docker-entrypoint.sh"]
+WORKDIR /root/prj/abs_sync/scripts
+CMD python /root/prj/run.py

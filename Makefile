@@ -10,8 +10,18 @@ all: build push clean
 build: cp_ssh_key
 	docker build --tag "$(DOCKER_IMAGE)" .
 
+run: build
+	docker run --rm -it abs/sync_script
+
+it:
+	docker run --rm -it abs/sync_script bash
+
 clear:
 	rm -rf $(PRJ_DIR)/.pytest_cache $(PRJ_DIR)/dbs $(PRJ_DIR)/logs $(PRJ_DIR)/.ssh
 
-cp_ssh_key:
+COPIED := $(PRJ_DIR)/.makefile/ssh_copied
+$(COPIED):
 	-cp -R $(HOME)/.ssh $(PRJ_DIR)/.ssh
+	-mkdir ./.makefile
+	touch $(COPIED)
+cp_ssh_key: $(COPIED)

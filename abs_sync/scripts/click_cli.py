@@ -11,6 +11,7 @@ from abs_sync import config, save_methods, git_funcs, log
 # from refresh_methods import update
 from abs_sync.config import read_parameters, write_parameters, default_parameters, dbs
 from abs_sync.save_methods import pull_all_objects, pull_last_objects, Db
+from run import schedule_all_db
 
 
 @click.group()
@@ -50,29 +51,7 @@ def tns():
 def sync(s):
     print('sync')
     if s:
-        def do_schedule(connection_string):
-            # cnn_object = cx_Oracle.connect(connection_string)
-            m = re.match(r"(?P<user>.+)/(?P<pass>.+)@(?P<dbname>.+)", connection_string)
-            db_name = m.group('dbname')
-            log.get_logger(db_name)
-            # schedule.every(5).seconds.do(git_funcs.update, connection_string)
-            schedule.every(1).hours.do(git_funcs.update, connection_string)
-            git_funcs.update(connection_string)
-
-        # dbs = ["day", "mideveryday", "msb", "lw-ass-abs", "lw-abs-abs", "lw-p2-abs", "midabs", "mid-abs-ssd"]
-        # do_schedule("ibs/HtuRhtl@day")
-        # do_schedule("ibs/HtuRhtl@mideveryday")
-        # do_schedule("ibs/HtuRhtl@msb")
-        # do_schedule("ibs/HtuRhtl@lw-ass-abs")
-        # do_schedule("ibs/HtuRhtl@lw-abs-abs")
-        # do_schedule("ibs/HtuRhtl@lw-p2-abs")
-        # do_schedule("ibs/HtuRhtl@midabs")
-        # do_schedule("ibs/HtuRhtl@ssd")
-        for connection_string in dbs.values():
-            do_schedule(connection_string)
-        while True:
-            schedule.run_pending()
-            time.sleep(1)
+        schedule_all_db()
 
 
 @cli.group()
