@@ -170,11 +170,11 @@ dbs = {
     # 'msb': "ibs/HtuRhtl@msb",
     # 'mid': "ibs/HtuRhtl@midabs",
     # 'midday': "ibs/HtuRhtl@MIDEVERYDAY",
-    'ass': "ibs/HtuRhtl@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = lw-ass-abs.brc.local)(PORT = 1521)))(CONNECT_DATA =(SID = assabs)))",
+    'ass': "ibs/HtuRhtl@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = lw-ass-abs.brc.local)(PORT = 1521)))(CONNECT_DATA =(SID = lwter)))",
     'abs': "ibs/HtuRhtl@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = lw-abs-abs.brc.local)(PORT = 1521)))(CONNECT_DATA =(SID = lwabsabs)))",
     'p2': "ibs/HtuRhtl@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = lw-p2-abs.brc.local)(PORT = 1521)))(CONNECT_DATA =(SID = lwp2abs)))",
     'msb': "ibs/HtuRhtl@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = lw-abs-abs-msb.brc.local)(PORT = 1521)))(CONNECT_DATA =(SID = msb)))",
     'mid': "ibs/HtuRhtl@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = mid-abs.brc.local)(PORT = 1521)))(CONNECT_DATA =(SID = midabs)))",
     'midday': "ibs/HtuRhtl@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = 172.21.13.152)(PORT = 1521)))(CONNECT_DATA =(SID = Midabsev)))",
-    'day': "ibs/HtuRhtl@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = lw-abs-abs-everyday)(PORT = 1521)))(CONNECT_DATA =(SID = lwabsev)))",
+    'day': "ibs/HtuRhtl@(DESCRIPTION =(ADDRESS_LIST =(ADDRESS = (PROTOCOL = TCP)(HOST = lw-abs-abs-everyday)(PORT = 1521)))(CONNECT_DATA =(SID = lwter)))",
     'ssd': "ibs/HtuRhtl@(DESCRIPTION=(ADDRESS_LIST =(ADDRESS=(PROTOCOL=TCP)(HOST=172.21.13.214)(PORT=1521)))(CONNECT_DATA =(SID=midabs)))"}
