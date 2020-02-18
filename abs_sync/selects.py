@@ -85,7 +85,7 @@ methods_sql = u"""
             CROSS JOIN types t
             WHERE greatest(m.modified, coalesce((SELECT max(dm.TIME) FROM DIARY_METHODS dm WHERE dm.method_id = m.id),m.modified)) BETWEEN to_date('%s','dd.mm.yyyy hh24:mi:ss') and sysdate
               and m.modified >= sysdate - {0}
-              and upper(m.user_modified) in ({1})
+            --  and upper(m.user_modified) in ({1})
             --inner join METHODS m on m.id = s.name
             --where m.class_id = 'BRK_MSG' and m.short_name = 'L'
             --order by m.class_id, m.short_name""".format(config.days_when_object_modified_update_from_action,
@@ -122,7 +122,7 @@ select * from (
     WHERE cr.modified >= sysdate - {0}
 ) cr
 where greatest(cr.MODIFIED, cr.ACTION_DATE) BETWEEN to_date('%s','dd.mm.yyyy hh24:mi:ss') and sysdate
-  and upper(cr.user_modified) in ({1})""".format(config.days_when_object_modified_update_from_action,
+  --and upper(cr.user_modified) in ({1})""".format(config.days_when_object_modified_update_from_action,
                                                  config.users_to_save_objects_in_git_str)
 
 texts_sql = {'METHOD': methods_sql, 'VIEW': creteria_sql, 'TRIGGER': triggers_sql}
